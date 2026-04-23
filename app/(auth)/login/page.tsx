@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Dumbbell, Mail, Lock, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import './auth.css';
+import '../auth.css';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,8 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const emailToAuth = `${username.trim()}@amagym.local`;
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: emailToAuth, password });
 
     if (authError) {
       setError(authError.message);
@@ -45,7 +46,7 @@ export default function LoginPage() {
           <div className="auth-logo-icon">
             <Dumbbell size={28} />
           </div>
-          <span className="auth-logo-text">GymPro</span>
+          <span className="auth-logo-text">AMA Gym</span>
         </div>
 
         <div className="auth-header">
@@ -62,18 +63,18 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="auth-form" id="login-form">
           <div className="form-group">
-            <label htmlFor="email" className="form-label">Email address</label>
+            <label htmlFor="username" className="form-label">Username</label>
             <div className="input-with-icon">
               <Mail size={16} className="input-icon" />
               <input
-                id="email"
-                type="email"
+                id="username"
+                type="text"
                 className="form-input"
-                placeholder="admin@gym.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 autoFocus
               />
             </div>

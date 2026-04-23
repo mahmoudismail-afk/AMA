@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Dumbbell, Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { registerAdmin } from '@/lib/actions/auth';
 import '../auth.css';
 
 export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: '',
-    email: '',
+    username: '',
     phone: '',
     password: '',
     confirmPassword: '',
@@ -40,57 +41,46 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const supabase = createClient();
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: formData.email,
+    // Call server action to create user (bypasses email confirmation)
+    const result = await registerAdmin({
+      username: formData.username,
       password: formData.password,
-      options: {
-        data: {
-          full_name: formData.fullName,
-          phone: formData.phone,
-          role: 'admin',
-        },
-      },
+      fullName: formData.fullName,
+      phone: formData.phone,
     });
 
-    if (authError) {
-      setError(authError.message);
+    if (result.error) {
+      setError(result.error);
       setLoading(false);
       return;
     }
 
-    // If email confirmation is disabled, redirect immediately
-    if (data.session) {
-      router.push('/dashboard');
-      router.refresh();
+    // Since the account is created and auto-confirmed by the server action,
+    // we can immediately log them in on the client side to establish the session.
+    const supabase = createClient();
+    const emailToAuth = `${formData.username.trim()}@amagym.local`;
+    
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailToAuth,
+      password: formData.password,
+    });
+
+    if (signInError) {
+      setError('Account created, but could not sign in automatically: ' + signInError.message);
+      setLoading(false);
       return;
     }
 
-    // Email confirmation required
-    setSuccess(true);
-    setLoading(false);
+    // Success! Redirect to dashboard immediately.
+    router.push('/dashboard');
+    router.refresh();
   }
 
-  if (success) {
-    return (
-      <div className="auth-page">
-        <div className="auth-orb auth-orb-1" />
-        <div className="auth-orb auth-orb-2" />
-        <div className="auth-card animate-slide" style={{ textAlign: 'center' }}>
-          <div className="auth-success-icon">
-            <CheckCircle size={48} />
-          </div>
-          <h2 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Check your email!</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-            We&apos;ve sent a confirmation link to <strong style={{ color: 'var(--text-secondary)' }}>{formData.email}</strong>.
-            Click the link to activate your account.
-          </p>
-          <Link href="/login" className="btn btn-primary btn-full">Back to Sign in</Link>
-        </div>
-      </div>
-    );
-  }
+
+
+  // We no longer need the success screen because it redirects automatically
+  if (success) return null;
 
   return (
     <div className="auth-page">
@@ -102,7 +92,7 @@ export default function SignupPage() {
           <div className="auth-logo-icon">
             <Dumbbell size={28} />
           </div>
-          <span className="auth-logo-text">GymPro</span>
+          <span className="auth-logo-text">AMA Gym</span>
         </div>
 
         <div className="auth-header">
@@ -137,17 +127,17 @@ export default function SignupPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="signup-email" className="form-label">Email address <span className="required">*</span></label>
+            <label htmlFor="signup-username" className="form-label">Username <span className="required">*</span></label>
             <div className="input-with-icon">
-              <Mail size={16} className="input-icon" />
+              <User size={16} className="input-icon" />
               <input
-                id="signup-email"
-                name="email"
-                type="email"
+                id="signup-username"
+                name="username"
+                type="text"
                 className="form-input"
-                placeholder="admin@gym.com"
-                value={formData.email}
-                onChange={handleChange}
+                placeholder="admin"
+                value={formData.username}
+                onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/\s+/g, '') }))}
                 required
               />
             </div>

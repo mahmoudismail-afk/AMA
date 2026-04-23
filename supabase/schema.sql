@@ -1,5 +1,5 @@
 -- ================================================================
--- GymPro — Supabase Database Schema
+-- AMA Gym — Supabase Database Schema
 -- Run this in your Supabase SQL Editor (supabase.com → SQL Editor)
 -- ================================================================
 
@@ -7,10 +7,13 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ================================================================
--- PROFILES (extends auth.users)
+-- PROFILES
+-- NOTE: id is NOT forced to reference auth.users so that admin
+--       can create member profiles without creating auth accounts.
 -- ================================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  auth_id     UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
   full_name   TEXT NOT NULL DEFAULT '',
   email       TEXT NOT NULL DEFAULT '',
   phone       TEXT,
@@ -19,11 +22,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Auto-create profile on user signup
+-- Auto-create profile on user signup (for admin/staff who sign up normally)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, email, phone, role)
+  INSERT INTO public.profiles (auth_id, full_name, email, phone, role)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
@@ -31,7 +34,7 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
     COALESCE(NEW.raw_user_meta_data->>'role', 'admin')
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (auth_id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -177,20 +180,31 @@ ALTER TABLE public.class_bookings  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.check_ins       ENABLE ROW LEVEL SECURITY;
 
--- Profiles: users can read all, update own
+-- Profiles: all authenticated users can read; update own by auth_id
 CREATE POLICY "Profiles are viewable by authenticated users"
   ON public.profiles FOR SELECT TO authenticated USING (TRUE);
 CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
+  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = auth_id);
+-- Service role can insert profiles (for member creation without auth account)
+CREATE POLICY "Service role can insert profiles"
+  ON public.profiles FOR INSERT TO service_role WITH CHECK (TRUE);
+CREATE POLICY "Service role can manage profiles"
+  ON public.profiles FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
 
--- All other tables: full access for authenticated users (admin/staff)
--- In production you would restrict by role. For MVP, authenticated = full access.
+-- All other tables: full access for authenticated users
 CREATE POLICY "Authenticated users have full access to members"
   ON public.members FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Service role full access to members"
+  ON public.members FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
+
 CREATE POLICY "Authenticated users have full access to membership_plans"
   ON public.membership_plans FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+
 CREATE POLICY "Authenticated users have full access to memberships"
   ON public.memberships FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Service role full access to memberships"
+  ON public.memberships FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
+
 CREATE POLICY "Authenticated users have full access to trainers"
   ON public.trainers FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
 CREATE POLICY "Authenticated users have full access to class_types"
@@ -199,13 +213,17 @@ CREATE POLICY "Authenticated users have full access to class_schedules"
   ON public.class_schedules FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
 CREATE POLICY "Authenticated users have full access to class_bookings"
   ON public.class_bookings FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+
 CREATE POLICY "Authenticated users have full access to payments"
   ON public.payments FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Service role full access to payments"
+  ON public.payments FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
+
 CREATE POLICY "Authenticated users have full access to check_ins"
   ON public.check_ins FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
 
 -- ================================================================
--- SEED DATA — Sample membership plans
+-- SEED DATA
 -- ================================================================
 INSERT INTO public.membership_plans (name, description, price, duration_days, features, is_active) VALUES
   ('Basic Monthly',   'Access to gym equipment and locker rooms',        29.99, 30,  '["Gym access", "Locker room", "Free parking"]', TRUE),
@@ -214,7 +232,6 @@ INSERT INTO public.membership_plans (name, description, price, duration_days, fe
   ('Annual',          'Best value — full year unlimited access',        199.99, 365, '["Gym access", "All classes", "Sauna", "Personal trainer session", "Free parking"]', TRUE)
 ON CONFLICT DO NOTHING;
 
--- Sample class types
 INSERT INTO public.class_types (name, description, color) VALUES
   ('Yoga',       'Mind and body balance sessions',    '#10b981'),
   ('CrossFit',   'High-intensity functional training','#ef4444'),

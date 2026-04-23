@@ -17,10 +17,10 @@ export function formatCurrency(amount: number): string {
  */
 export function formatDate(dateStr: string, options?: Intl.DateTimeFormatOptions): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
+  return date.toLocaleDateString('en-GB', {
     day: 'numeric',
+    month: 'long',
+    year: 'numeric',
     ...options,
   });
 }
@@ -30,12 +30,13 @@ export function formatDate(dateStr: string, options?: Intl.DateTimeFormatOptions
  */
 export function formatDateTime(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
+  return date.toLocaleDateString('en-GB', {
     day: 'numeric',
+    month: 'short',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
   });
 }
 
