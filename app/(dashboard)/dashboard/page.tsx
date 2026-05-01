@@ -6,6 +6,7 @@ import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Dashboard' };
+export const dynamic = 'force-dynamic';
 
 async function getDashboardData() {
   const supabase = await createClient();
