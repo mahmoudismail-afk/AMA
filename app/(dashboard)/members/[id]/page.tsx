@@ -7,7 +7,8 @@ import MemberDetailClient from '@/components/members/MemberDetailClient';
 
 export const metadata: Metadata = { title: 'Member Profile' };
 
-export default async function MemberDetailPage({ params }: { params: { id: string } }) {
+export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const [{ data: member }, { data: plans }] = await Promise.all([
@@ -19,7 +20,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         payments(id, amount, payment_method, payment_date, notes),
         check_ins(id, checked_in_at)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single(),
     supabase.from('membership_plans').select('*').eq('is_active', true).order('price'),
   ]);
@@ -38,7 +39,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             <p className="page-subtitle">Full details and history</p>
           </div>
         </div>
-        <Link href={`/members/${params.id}/edit`} className="btn btn-secondary" id="edit-member-btn">
+        <Link href={`/members/${id}/edit`} className="btn btn-secondary" id="edit-member-btn">
           <Edit size={16} /> Edit Member
         </Link>
       </div>
