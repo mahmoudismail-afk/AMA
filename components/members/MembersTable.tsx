@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { getInitials, getMemberStatusColor, formatDate } from '@/lib/utils';
@@ -12,10 +12,67 @@ interface MembersTableProps {
   members: any[];
 }
 
+// Compute days left for a member based on their active membership
+function getDaysLeft(m: any): number | null {
+  const memberships: any[] = m.memberships ?? [];
+  const active = memberships
+    .filter((ms: any) => ms.status === 'active')
+    .sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())[0];
+  if (!active?.end_date) return null;
+  const diff = new Date(active.end_date).getTime() - new Date().getTime();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
 export default function MembersTable({ members }: MembersTableProps) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // 'none' = default order, 'asc' = expiring soonest first, 'desc' = most time remaining first
+  const [sortDays, setSortDays] = useState<'none' | 'asc' | 'desc'>('none');
+  // 'none' = default, 'asc' = A→Z, 'desc' = Z→A
+  const [sortName, setSortName] = useState<'none' | 'asc' | 'desc'>('none');
+
+  // Auto-expire: when the table loads, patch any membership/member whose end_date has passed
+  useEffect(() => {
+    async function autoExpire() {
+      const supabase = createClient();
+      const today = new Date().toISOString().split('T')[0];
+
+      // Find active memberships that are past their end_date
+      const expiredMemberIds: string[] = [];
+      for (const m of members) {
+        const memberships: any[] = m.memberships ?? [];
+        for (const ms of memberships) {
+          if (ms.status === 'active' && ms.end_date && ms.end_date < today) {
+            // Mark the membership row as expired
+            await supabase
+              .from('memberships')
+              .update({ status: 'expired' })
+              .eq('member_id', m.id)
+              .eq('status', 'active')
+              .lt('end_date', today);
+            expiredMemberIds.push(m.id);
+            break;
+          }
+        }
+      }
+
+      // Mark the member record as expired too (only if not already expired)
+      if (expiredMemberIds.length > 0) {
+        for (const memberId of expiredMemberIds) {
+          await supabase
+            .from('members')
+            .update({ status: 'expired' })
+            .eq('id', memberId)
+            .neq('status', 'expired');
+        }
+        router.refresh();
+      }
+    }
+
+    autoExpire();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -26,6 +83,58 @@ export default function MembersTable({ members }: MembersTableProps) {
     setDeleting(false);
     router.refresh();
   }
+
+  function cycleSortDays() {
+    setSortDays(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+  }
+
+  function cycleSortName() {
+    setSortName(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+  }
+
+  // Helper: build a sort icon for a given sort state
+  function SortIcon({ state }: { state: 'none' | 'asc' | 'desc' }) {
+    if (state === 'none') return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+        style={{ opacity: 0.4, verticalAlign: 'middle' }}>
+        <path d="M8 9l4-4 4 4M8 15l4 4 4-4"/>
+      </svg>
+    );
+    if (state === 'asc') return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        style={{ color: 'var(--primary)', verticalAlign: 'middle' }}>
+        <path d="M5 15l7-7 7 7"/>
+      </svg>
+    );
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        style={{ color: 'var(--primary)', verticalAlign: 'middle' }}>
+        <path d="M5 9l7 7 7-7"/>
+      </svg>
+    );
+  }
+
+  const sortedMembers = [...members].sort((a, b) => {
+    // Name sort applied first
+    if (sortName !== 'none') {
+      const na = (a.profile?.full_name ?? '').toLowerCase();
+      const nb = (b.profile?.full_name ?? '').toLowerCase();
+      const cmp = na.localeCompare(nb);
+      if (cmp !== 0) return sortName === 'asc' ? cmp : -cmp;
+    }
+    // Days-left sort applied second
+    if (sortDays !== 'none') {
+      const da = getDaysLeft(a);
+      const db = getDaysLeft(b);
+      if (da === null && db === null) return 0;
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return sortDays === 'asc' ? da - db : db - da;
+    }
+    return 0;
+  });
+
+
 
   if (members.length === 0) {
     return (
@@ -53,20 +162,81 @@ export default function MembersTable({ members }: MembersTableProps) {
         <table className="table" id="members-table">
           <thead>
             <tr>
-              <th>Member</th>
+              <th>
+                <button
+                  onClick={cycleSortName}
+                  id="sort-name-btn"
+                  title={sortName === 'none' ? 'Sort A→Z' : sortName === 'asc' ? 'Sort Z→A' : 'Clear sort'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: sortName !== 'none' ? 'var(--primary)' : 'inherit',
+                    fontWeight: sortName !== 'none' ? 700 : 'inherit',
+                    fontSize: 'inherit',
+                    padding: 0,
+                    transition: 'color 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Member
+                  <SortIcon state={sortName} />
+                </button>
+              </th>
               <th>Contact</th>
               <th>Status</th>
-              <th>Joined</th>
+              <th>
+                <button
+                  onClick={cycleSortDays}
+                  id="sort-days-left-btn"
+                  title={
+                    sortDays === 'none'
+                      ? 'Sort by days left (expiring soonest first)'
+                      : sortDays === 'asc'
+                      ? 'Sort by days left (most time remaining first)'
+                      : 'Clear sort'
+                  }
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: sortDays !== 'none' ? 'var(--primary)' : 'inherit',
+                    fontWeight: sortDays !== 'none' ? 700 : 'inherit',
+                    fontSize: 'inherit',
+                    padding: 0,
+                    transition: 'color 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Joined / Days Left
+                  <SortIcon state={sortDays} />
+                </button>
+              </th>
               <th style={{ textAlign: 'center' }}>Subscription</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {members.map((m: any) => {
+            {sortedMembers.map((m: any) => {
               const name = m.profile?.full_name ?? 'Unknown';
               const email = m.profile?.email ?? '';
               const phone = m.profile?.phone ?? '';
               const avatar = m.profile?.avatar_url;
+              const memberships: any[] = m.memberships ?? [];
+              const active = memberships
+                .filter((ms: any) => ms.status === 'active')
+                .sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())[0];
+              const earliest = [...memberships]
+                .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0];
+              const date = active?.start_date ?? earliest?.start_date ?? m.created_at;
+              const daysLeft = getDaysLeft(m);
+
               return (
                 <tr key={m.id}>
                   <td>
@@ -89,42 +259,27 @@ export default function MembersTable({ members }: MembersTableProps) {
                     </span>
                   </td>
                   <td>
-                    {(() => {
-                      const memberships: any[] = m.memberships ?? [];
-                      const active = memberships
-                        .filter((ms: any) => ms.status === 'active')
-                        .sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())[0];
-                      const earliest = memberships
-                        .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0];
-                      const date = active?.start_date ?? earliest?.start_date ?? m.created_at;
-
-                      // Days left calculation
-                      let daysLeft: number | null = null;
-                      if (active?.end_date) {
-                        const diff = new Date(active.end_date).getTime() - new Date().getTime();
-                        daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                      }
-
-                      return (
-                        <div>
-                          <span>{formatDate(date)}</span>
-                          {daysLeft !== null && (
-                            <div style={{ marginTop: '0.2rem' }}>
-                              <span style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 600,
-                                padding: '0.1rem 0.45rem',
-                                borderRadius: '999px',
-                                background: daysLeft <= 0 ? 'var(--danger-bg)' : daysLeft <= 7 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.12)',
-                                color: daysLeft <= 0 ? 'var(--danger)' : daysLeft <= 7 ? 'var(--warning)' : 'var(--success)',
-                              }}>
-                                {daysLeft <= 0 ? 'Expired' : `${daysLeft}d left`}
-                              </span>
-                            </div>
-                          )}
+                    <div>
+                      <span>{formatDate(date)}</span>
+                      {daysLeft !== null && (
+                        <div style={{ marginTop: '0.2rem' }}>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            padding: '0.1rem 0.45rem',
+                            borderRadius: '999px',
+                            background: daysLeft <= 0 ? 'var(--danger-bg)' : daysLeft <= 7 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.12)',
+                            color: daysLeft <= 0 ? 'var(--danger)' : daysLeft <= 7 ? 'var(--warning)' : 'var(--success)',
+                          }}>
+                            {daysLeft <= 0
+                              ? daysLeft === 0
+                                ? 'Expired today'
+                                : `Expired ${Math.abs(daysLeft)}d ago`
+                              : `${daysLeft}d left`}
+                          </span>
                         </div>
-                      );
-                    })()}
+                      )}
+                    </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <Link href={`/members/${m.id}`} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
