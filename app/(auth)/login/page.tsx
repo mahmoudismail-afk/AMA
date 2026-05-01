@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Dumbbell, Mail, Lock, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -81,9 +80,8 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <div className="auth-label-row">
+            <div style={{ marginBottom: '0.5rem' }}>
               <label htmlFor="password" className="form-label">Password</label>
-              <Link href="/forgot-password" className="auth-link-sm">Forgot password?</Link>
             </div>
             <div className="input-with-icon">
               <Lock size={16} className="input-icon" />
@@ -120,10 +118,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="auth-footer">
-          <span>Don&apos;t have an account?</span>
-          <Link href="/signup" className="auth-link">Create account</Link>
-        </div>
       </div>
     </div>
   );

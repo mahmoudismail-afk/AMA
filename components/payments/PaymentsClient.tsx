@@ -2,16 +2,33 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, DollarSign, AlertCircle } from 'lucide-react';
+import { Plus, DollarSign, AlertCircle, Trash2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
-export default function PaymentsClient({ payments: initial, members }: { payments: any[]; members: any[] }) {
+function methodLabel(m: string) {
+  return m.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export default function PaymentsClient({
+  payments: initial,
+  deletedPayments: initialDeleted,
+  members,
+}: {
+  payments: any[];
+  deletedPayments: any[];
+  members: any[];
+}) {
   const router = useRouter();
   const [payments, setPayments] = useState(initial);
+  const [deletedPayments, setDeletedPayments] = useState(initialDeleted);
+  const [showDeleted, setShowDeleted] = useState(false);
+
+  // Add modal
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -21,6 +38,11 @@ export default function PaymentsClient({ payments: initial, members }: { payment
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+
+  // Delete / restore
+  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [restoring, setRestoringId] = useState<string | null>(null);
 
   const filteredMembers = members.filter((m) =>
     (m.profile?.full_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -51,6 +73,78 @@ export default function PaymentsClient({ payments: initial, members }: { payment
     router.refresh();
   }
 
+  async function handleDelete() {
+    if (!paymentToDelete) return;
+    setDeleting(true);
+    const supabase = createClient();
+    const now = new Date().toISOString();
+    const { error: err } = await supabase
+      .from('payments')
+      .update({ deleted_at: now })
+      .eq('id', paymentToDelete.id);
+
+    if (err) { setDeleting(false); return; }
+
+    const deleted = { ...paymentToDelete, deleted_at: now };
+    setPayments((prev) => prev.filter((p) => p.id !== paymentToDelete.id));
+    setDeletedPayments((prev) => [deleted, ...prev]);
+    setPaymentToDelete(null);
+    setDeleting(false);
+  }
+
+  async function handleRestore(payment: any) {
+    setRestoringId(payment.id);
+    const supabase = createClient();
+    const { error: err } = await supabase
+      .from('payments')
+      .update({ deleted_at: null })
+      .eq('id', payment.id);
+
+    if (!err) {
+      const restored = { ...payment, deleted_at: null };
+      setDeletedPayments((prev) => prev.filter((p) => p.id !== payment.id));
+      setPayments((prev) => [restored, ...prev]);
+    }
+    setRestoringId(null);
+  }
+
+  function PaymentRow({ p, showDelete }: { p: any; showDelete: boolean }) {
+    return (
+      <tr key={p.id}>
+        <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{p.member?.profile?.full_name ?? '—'}</td>
+        <td style={{ color: 'var(--success)', fontWeight: 600 }}>{formatCurrency(p.amount)}</td>
+        <td><span className="badge badge-neutral">{methodLabel(p.payment_method)}</span></td>
+        <td>{formatDate(p.payment_date)}</td>
+        <td style={{ color: 'var(--text-muted)' }}>{p.notes || '—'}</td>
+        <td>
+          {showDelete ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-icon"
+              style={{ color: 'var(--danger)' }}
+              onClick={() => setPaymentToDelete(p)}
+              title="Delete payment"
+            >
+              <Trash2 size={15} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--primary-light)', fontSize: '0.8rem' }}
+              onClick={() => handleRestore(p)}
+              disabled={restoring === p.id}
+              title="Restore payment"
+            >
+              <RotateCcw size={13} />
+              {restoring === p.id ? 'Restoring...' : 'Restore'}
+            </button>
+          )}
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <>
       <div className="page-header">
@@ -69,38 +163,70 @@ export default function PaymentsClient({ payments: initial, members }: { payment
           const total = payments.filter((p) => p.payment_method === method).reduce((s, p) => s + Number(p.amount), 0);
           return (
             <div key={method} className="stat-card">
-              <p className="stat-label">{method.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+              <p className="stat-label">{methodLabel(method)}</p>
               <p className="stat-value" style={{ fontSize: '1.5rem' }}>{formatCurrency(total)}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Active Payments Table */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1.5rem' }}>
         <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
           <table className="table" id="payments-table">
             <thead>
               <tr>
-                <th>Member</th><th>Amount</th><th>Method</th><th>Date</th><th>Notes</th>
+                <th>Member</th><th>Amount</th><th>Method</th><th>Date</th><th>Notes</th><th style={{ width: 60 }}></th>
               </tr>
             </thead>
             <tbody>
               {payments.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No payments recorded yet.</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No payments recorded yet.</td></tr>
               )}
-              {payments.map((p) => (
-                <tr key={p.id}>
-                  <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{p.member?.profile?.full_name ?? '—'}</td>
-                  <td style={{ color: 'var(--success)', fontWeight: 600 }}>{formatCurrency(p.amount)}</td>
-                  <td><span className="badge badge-neutral">{p.payment_method.replace('_', ' ')}</span></td>
-                  <td>{formatDate(p.payment_date)}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{p.notes || '—'}</td>
-                </tr>
-              ))}
+              {payments.map((p) => <PaymentRow key={p.id} p={p} showDelete={true} />)}
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Deleted Payments Section */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <button
+          type="button"
+          onClick={() => setShowDeleted((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: '100%', padding: '1rem 1.25rem', background: 'none', border: 'none',
+            cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.95rem',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Trash2 size={16} style={{ color: 'var(--danger)' }} />
+            Deleted Payments
+            <span className="badge badge-neutral" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
+              {deletedPayments.length}
+            </span>
+          </span>
+          {showDeleted ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        {showDeleted && (
+          <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Member</th><th>Amount</th><th>Method</th><th>Date</th><th>Notes</th><th style={{ width: 100 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {deletedPayments.length === 0 && (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No deleted payments.</td></tr>
+                )}
+                {deletedPayments.map((p) => <PaymentRow key={p.id} p={p} showDelete={false} />)}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Record Payment Modal */}
@@ -173,7 +299,7 @@ export default function PaymentsClient({ payments: initial, members }: { payment
             <div className="form-group">
               <label className="form-label">Payment Method</label>
               <select name="payment_method" className="form-input" value={form.payment_method} onChange={handleChange}>
-                {METHODS.map((m) => <option key={m} value={m}>{m.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>)}
+                {METHODS.map((m) => <option key={m} value={m}>{methodLabel(m)}</option>)}
               </select>
             </div>
           </div>
@@ -187,6 +313,17 @@ export default function PaymentsClient({ payments: initial, members }: { payment
           </div>
         </div>
       </Modal>
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={!!paymentToDelete}
+        onClose={() => setPaymentToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Payment"
+        message={`Are you sure you want to delete the payment of ${paymentToDelete ? formatCurrency(paymentToDelete.amount) : ''}? You can restore it later from the Deleted Payments section.`}
+        confirmLabel="Delete"
+        loading={deleting}
+      />
     </>
   );
 }

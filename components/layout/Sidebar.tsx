@@ -9,7 +9,6 @@ import {
   Calendar,
   UserCheck,
   DollarSign,
-  BarChart3,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +29,6 @@ const NAV_ITEMS = [
   { href: '/payments',   label: 'Payments',   icon: DollarSign,      id: 'payments' },
   { href: '/plans',      label: 'Plans',      icon: CreditCard,      id: 'plans' },
   { href: '/trainers',   label: 'Trainers',   icon: UserCheck,       id: 'trainers' },
-  { href: '/reports',    label: 'Reports',    icon: BarChart3,       id: 'reports' },
 ];
 
 interface SidebarProps {
