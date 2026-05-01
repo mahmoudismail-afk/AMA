@@ -11,14 +11,12 @@ export const metadata: Metadata = { title: 'Members' };
 export default async function MembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams?: { q?: string; status?: string };
 }) {
-  const resolvedSearchParams = await searchParams;
   await requirePermission('members');
   const supabase = await createClient();
-  const q = resolvedSearchParams.q ?? '';
-  const status = resolvedSearchParams.status ?? '';
-
+  const q = searchParams?.q ?? '';
+  const status = searchParams?.status ?? '';
   let query = supabase
     .from('members')
     .select(`
