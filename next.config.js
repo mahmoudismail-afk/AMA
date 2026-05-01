@@ -10,9 +10,15 @@ const nextConfig = {
       },
     ],
   },
-  // Required for Next.js 15 compatibility with React 18
-  experimental: {
-    reactCompiler: false,
+  // Redirect root to /dashboard at the config level (avoids the page manifest issue)
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/dashboard',
+        permanent: false,
+      },
+    ];
   },
 };
 
