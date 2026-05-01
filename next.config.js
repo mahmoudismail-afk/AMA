@@ -10,6 +10,10 @@ const nextConfig = {
       },
     ],
   },
+  // Required for Next.js 15 compatibility with React 18
+  experimental: {
+    reactCompiler: false,
+  },
 };
 
 module.exports = nextConfig;
