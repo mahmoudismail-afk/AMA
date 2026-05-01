@@ -88,7 +88,44 @@ export default function MembersTable({ members }: MembersTableProps) {
                       {m.status}
                     </span>
                   </td>
-                  <td>{formatDate(m.created_at)}</td>
+                  <td>
+                    {(() => {
+                      const memberships: any[] = m.memberships ?? [];
+                      const active = memberships
+                        .filter((ms: any) => ms.status === 'active')
+                        .sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())[0];
+                      const earliest = memberships
+                        .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0];
+                      const date = active?.start_date ?? earliest?.start_date ?? m.created_at;
+
+                      // Days left calculation
+                      let daysLeft: number | null = null;
+                      if (active?.end_date) {
+                        const diff = new Date(active.end_date).getTime() - new Date().getTime();
+                        daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                      }
+
+                      return (
+                        <div>
+                          <span>{formatDate(date)}</span>
+                          {daysLeft !== null && (
+                            <div style={{ marginTop: '0.2rem' }}>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                padding: '0.1rem 0.45rem',
+                                borderRadius: '999px',
+                                background: daysLeft <= 0 ? 'var(--danger-bg)' : daysLeft <= 7 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.12)',
+                                color: daysLeft <= 0 ? 'var(--danger)' : daysLeft <= 7 ? 'var(--warning)' : 'var(--success)',
+                              }}>
+                                {daysLeft <= 0 ? 'Expired' : `${daysLeft}d left`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td style={{ textAlign: 'center' }}>
                     <Link href={`/members/${m.id}`} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                       <RefreshCw size={12} style={{ marginRight: '4px' }} /> Renew

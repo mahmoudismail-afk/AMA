@@ -62,7 +62,8 @@ export async function createMember(formData: {
       .single();
 
     if (plan) {
-      const start = new Date();
+      // Use joined_at as start date if provided, otherwise today
+      const start = formData.joined_at ? new Date(formData.joined_at) : new Date();
       const end = new Date(start);
       end.setDate(end.getDate() + plan.duration_days);
 

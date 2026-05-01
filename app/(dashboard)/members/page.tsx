@@ -22,7 +22,8 @@ export default async function MembersPage({
     .from('members')
     .select(`
       id, status, created_at,
-      profile:profiles(full_name, email, phone, avatar_url)
+      profile:profiles(full_name, email, phone, avatar_url),
+      memberships(start_date, end_date, status)
     `)
     .order('created_at', { ascending: false });
 

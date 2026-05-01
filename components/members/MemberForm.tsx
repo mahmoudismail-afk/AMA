@@ -142,14 +142,14 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
             </div>
 
             <div className="form-group">
-              <label className="form-label">Date Joined <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
+              <label className="form-label">Membership Start Date <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
               <div className="input-with-icon">
                 <Calendar size={15} className="input-icon" />
                 <input name="joined_at" type="date" className="form-input"
                   value={form.joined_at} onChange={handleChange}
                   max={new Date().toISOString().split('T')[0]} />
               </div>
-              <span className="form-hint">Leave blank to use today&apos;s date.</span>
+              <span className="form-hint">This sets when the plan starts. Leave blank to use today&apos;s date.</span>
             </div>
           </div>
         </div>
