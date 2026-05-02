@@ -7,10 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:worker": "opennextjs-cloudflare build",
-    "dev:worker": "wrangler dev",
-    "preview:worker": "npm run build:worker && npm run dev:worker",
-    "deploy:worker": "npm run build:worker && wrangler deploy"
+    "pages:build": "npx @cloudflare/next-on-pages"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -22,7 +19,7 @@
     "recharts": "^2.15.3"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.19.5",
+    "@cloudflare/next-on-pages": "^1.13.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -32,3 +29,4 @@
     "wrangler": "^4.87.0"
   }
 }
+
