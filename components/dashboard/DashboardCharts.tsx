@@ -1,14 +1,15 @@
 'use client';
 
-import { RevenueChart, MemberGrowthChart, PlanDistributionChart } from '@/components/charts/Charts';
+import { RevenueChart, MemberGrowthChart, PlanDistributionChart, GenderChart } from '@/components/charts/Charts';
 
 interface DashboardChartsProps {
   revenueData: { month: string; revenue: number }[];
   memberGrowthData: { month: string; members: number }[];
   planData: { name: string; value: number }[];
+  genderData: { month: string; male: number; female: number; other: number }[];
 }
 
-export default function DashboardCharts({ revenueData, memberGrowthData, planData }: DashboardChartsProps) {
+export default function DashboardCharts({ revenueData, memberGrowthData, planData, genderData }: DashboardChartsProps) {
   return (
     <div className="dashboard-grid">
       {/* Revenue chart — full width */}
@@ -31,6 +32,17 @@ export default function DashboardCharts({ revenueData, memberGrowthData, planDat
           </div>
         </div>
         <MemberGrowthChart data={memberGrowthData} />
+      </div>
+
+      {/* Gender breakdown */}
+      <div className="chart-card">
+        <div className="chart-card-header">
+          <div>
+            <p className="chart-card-title">Gender Breakdown</p>
+            <p className="chart-card-subtitle">New members gender per month</p>
+          </div>
+        </div>
+        <GenderChart data={genderData} />
       </div>
 
       {/* Plan distribution */}

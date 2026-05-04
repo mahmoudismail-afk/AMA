@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Phone, Mail, Calendar, CheckSquare, CreditCard,
-  Dumbbell, RefreshCw, AlertCircle, DollarSign
+  Dumbbell, RefreshCw, AlertCircle, DollarSign, Users
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -116,6 +116,12 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   <Phone size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   {member.profile.phone}
+                </div>
+              )}
+              {member.gender && (
+                <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                  <Users size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  {member.gender}
                 </div>
               )}
               {member.date_of_birth && (

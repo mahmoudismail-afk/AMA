@@ -78,6 +78,23 @@ async function getDashboardData() {
   });
   const planData = Object.entries(planMap).map(([name, value]) => ({ name, value }));
 
+  // Gender breakdown per month (last 6)
+  const { data: membersWithGender } = await supabase
+    .from('members')
+    .select('gender, created_at')
+    .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
+
+  const genderMonthMap: Record<string, { male: number; female: number; other: number }> = {};
+  months.forEach((m) => (genderMonthMap[m] = { male: 0, female: 0, other: 0 }));
+  (membersWithGender ?? []).forEach((mb: any) => {
+    const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
+    if (!genderMonthMap[m]) return;
+    if (mb.gender === 'male') genderMonthMap[m].male++;
+    else if (mb.gender === 'female') genderMonthMap[m].female++;
+    else genderMonthMap[m].other++;
+  });
+  const genderData = months.map((month) => ({ month, ...genderMonthMap[month] }));
+
   return {
     stats: {
       totalMembers: totalMembers ?? 0,
@@ -91,11 +108,12 @@ async function getDashboardData() {
     revenueData,
     memberGrowthData,
     planData,
+    genderData,
   };
 }
 
 export default async function DashboardPage() {
-  const { stats, recentCheckIns, revenueData, memberGrowthData, planData } = await getDashboardData();
+  const { stats, recentCheckIns, revenueData, memberGrowthData, planData, genderData } = await getDashboardData();
 
   return (
     <div>
@@ -163,6 +181,7 @@ export default async function DashboardPage() {
         revenueData={revenueData}
         memberGrowthData={memberGrowthData}
         planData={planData}
+        genderData={genderData}
       />
 
       {/* Recent Check-ins */}

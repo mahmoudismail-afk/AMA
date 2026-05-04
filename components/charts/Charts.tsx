@@ -92,3 +92,31 @@ export function PlanDistributionChart({ data }: PlanDistributionChartProps) {
     </ResponsiveContainer>
   );
 }
+
+/* ── Gender Breakdown Bar Chart ── */
+interface GenderChartProps {
+  data: { month: string; male: number; female: number; other: number }[];
+}
+export function GenderChart({ data }: GenderChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <Tooltip
+          contentStyle={tooltipStyle}
+          cursor={{ fill: 'rgba(108,99,255,0.08)' }}
+        />
+        <Legend
+          formatter={(value) => (
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', textTransform: 'capitalize' }}>{value}</span>
+          )}
+        />
+        <Bar dataKey="male" stackId="a" fill="#06b6d4" />
+        <Bar dataKey="female" stackId="a" fill="#ec4899" />
+        <Bar dataKey="other" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
