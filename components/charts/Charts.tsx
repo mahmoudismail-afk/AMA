@@ -95,7 +95,7 @@ export function PlanDistributionChart({ data }: PlanDistributionChartProps) {
 
 /* ── Gender Breakdown Bar Chart ── */
 interface GenderChartProps {
-  data: { month: string; male: number; female: number; other: number }[];
+  data: { month: string; male: number; female: number }[];
 }
 export function GenderChart({ data }: GenderChartProps) {
   return (
