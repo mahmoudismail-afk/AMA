@@ -114,8 +114,7 @@ export function GenderChart({ data }: GenderChartProps) {
           )}
         />
         <Bar dataKey="male" stackId="a" fill="#06b6d4" />
-        <Bar dataKey="female" stackId="a" fill="#ec4899" />
-        <Bar dataKey="other" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="female" stackId="a" fill="#ec4899" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
