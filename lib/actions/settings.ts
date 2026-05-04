@@ -2,10 +2,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
+  );
+}
 
 export async function createStaffAccount(data: {
   username: string;
@@ -14,6 +16,7 @@ export async function createStaffAccount(data: {
   phone: string;
   role: 'staff' | 'admin';
 }) {
+  const supabaseAdmin = getAdminClient();
   const email = `${data.username.trim()}@amagym.local`;
 
   const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -39,6 +42,8 @@ export async function createStaffAccount(data: {
 export async function deleteUser(profileId: string, authId?: string | null) {
   if (!profileId) return { error: 'No profile ID provided' };
   
+  const supabaseAdmin = getAdminClient();
+  
   // Delete the profile first
   const { error: profileError } = await supabaseAdmin.from('profiles').delete().eq('id', profileId);
   if (profileError) return { error: `Profile deletion failed: ${profileError.message}` };
@@ -56,6 +61,7 @@ export async function deleteUser(profileId: string, authId?: string | null) {
 }
 
 export async function updateProfile(profileId: string, data: { full_name: string; phone: string }) {
+  const supabaseAdmin = getAdminClient();
   const { error } = await supabaseAdmin
     .from('profiles')
     .update({ full_name: data.full_name, phone: data.phone })
@@ -65,6 +71,7 @@ export async function updateProfile(profileId: string, data: { full_name: string
 }
 
 export async function getStaffPermissions(): Promise<string[]> {
+  const supabaseAdmin = getAdminClient();
   const { data } = await supabaseAdmin
     .from('system_settings')
     .select('value')
@@ -84,6 +91,7 @@ export async function getStaffPermissions(): Promise<string[]> {
 }
 
 export async function saveStaffPermissions(permissions: string[]) {
+  const supabaseAdmin = getAdminClient();
   const { error } = await supabaseAdmin
     .from('system_settings')
     .upsert({ key: 'staff_permissions', value: permissions });

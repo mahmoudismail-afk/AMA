@@ -2,14 +2,16 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Use service role key to bypass email confirmation
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
+  );
+}
 
 export async function registerAdmin(data: { username: string; password: string; fullName: string; phone: string }) {
   try {
+    const supabaseAdmin = getAdminClient();
     const emailToAuth = `${data.username.trim()}@amagym.local`;
 
     const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
