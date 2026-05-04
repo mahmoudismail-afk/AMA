@@ -9,107 +9,126 @@ export const metadata: Metadata = { title: 'Dashboard' };
 export const dynamic = 'force-dynamic';
 
 async function getDashboardData() {
-  const supabase = await createClient();
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
-  const [
-    { count: totalMembers },
-    { count: activeMembers },
-    { count: newThisMonth },
-    { count: checkInsToday },
-    { count: classesToday },
-    { data: recentCheckIns },
-    { data: payments },
-  ] = await Promise.all([
-    supabase.from('members').select('*', { count: 'exact', head: true }),
-    supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('members').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
-    supabase.from('check_ins').select('*', { count: 'exact', head: true }).gte('checked_in_at', startOfToday),
-    supabase.from('class_schedules').select('*', { count: 'exact', head: true })
-      .gte('start_time', startOfToday)
-      .eq('status', 'scheduled'),
-    supabase.from('check_ins')
-      .select('id, checked_in_at, member:members(profile:profiles(full_name, avatar_url))')
-      .order('checked_in_at', { ascending: false })
-      .limit(8),
-    supabase.from('payments')
-      .select('amount, payment_date')
-      .gte('payment_date', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]),
-  ]);
-
-  // Monthly revenue — aggregate per month
   const months = getLastNMonths(6);
-  const revenueByMonth: Record<string, number> = {};
-  months.forEach((m) => (revenueByMonth[m] = 0));
-  (payments ?? []).forEach((p) => {
-    const m = new Date(p.payment_date).toLocaleString('en-US', { month: 'short' });
-    if (revenueByMonth[m] !== undefined) revenueByMonth[m] += Number(p.amount);
-  });
+  try {
+    const supabase = await createClient();
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
-  const revenueData = months.map((month) => ({ month, revenue: revenueByMonth[month] }));
-  const monthlyRevenue = revenueByMonth[months[months.length - 1]] ?? 0;
+    const [
+      { count: totalMembers },
+      { count: activeMembers },
+      { count: newThisMonth },
+      { count: checkInsToday },
+      { count: classesToday },
+      { data: recentCheckIns },
+      { data: payments },
+    ] = await Promise.all([
+      supabase.from('members').select('*', { count: 'exact', head: true }),
+      supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('members').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
+      supabase.from('check_ins').select('*', { count: 'exact', head: true }).gte('checked_in_at', startOfToday),
+      supabase.from('class_schedules').select('*', { count: 'exact', head: true })
+        .gte('start_time', startOfToday)
+        .eq('status', 'scheduled'),
+      supabase.from('check_ins')
+        .select('id, checked_in_at, member:members(profile:profiles(full_name, avatar_url))')
+        .order('checked_in_at', { ascending: false })
+        .limit(8),
+      supabase.from('payments')
+        .select('amount, payment_date')
+        .gte('payment_date', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]),
+    ]);
 
-  // New members per month (last 6)
-  const { data: membersByMonth } = await supabase
-    .from('members')
-    .select('created_at')
-    .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
+    // Monthly revenue — aggregate per month
+    const revenueByMonth: Record<string, number> = {};
+    months.forEach((m) => (revenueByMonth[m] = 0));
+    (payments ?? []).forEach((p) => {
+      const m = new Date(p.payment_date).toLocaleString('en-US', { month: 'short' });
+      if (revenueByMonth[m] !== undefined) revenueByMonth[m] += Number(p.amount);
+    });
 
-  const memberGrowthMap: Record<string, number> = {};
-  months.forEach((m) => (memberGrowthMap[m] = 0));
-  (membersByMonth ?? []).forEach((mb) => {
-    const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
-    if (memberGrowthMap[m] !== undefined) memberGrowthMap[m]++;
-  });
-  const memberGrowthData = months.map((month) => ({ month, members: memberGrowthMap[month] }));
+    const revenueData = months.map((month) => ({ month, revenue: revenueByMonth[month] }));
+    const monthlyRevenue = revenueByMonth[months[months.length - 1]] ?? 0;
 
-  // Plan distribution
-  const { data: membershipsWithPlan } = await supabase
-    .from('memberships')
-    .select('plan:membership_plans(name)')
-    .eq('status', 'active');
+    // New members per month (last 6)
+    const { data: membersByMonth } = await supabase
+      .from('members')
+      .select('created_at')
+      .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
 
-  const planMap: Record<string, number> = {};
-  (membershipsWithPlan ?? []).forEach((ms: any) => {
-    const name = ms.plan?.name ?? 'Unknown';
-    planMap[name] = (planMap[name] ?? 0) + 1;
-  });
-  const planData = Object.entries(planMap).map(([name, value]) => ({ name, value }));
+    const memberGrowthMap: Record<string, number> = {};
+    months.forEach((m) => (memberGrowthMap[m] = 0));
+    (membersByMonth ?? []).forEach((mb) => {
+      const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
+      if (memberGrowthMap[m] !== undefined) memberGrowthMap[m]++;
+    });
+    const memberGrowthData = months.map((month) => ({ month, members: memberGrowthMap[month] }));
 
-  // Gender breakdown per month (last 6)
-  const { data: membersWithGender } = await supabase
-    .from('members')
-    .select('gender, created_at')
-    .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
+    // Plan distribution
+    const { data: membershipsWithPlan } = await supabase
+      .from('memberships')
+      .select('plan:membership_plans(name)')
+      .eq('status', 'active');
 
-  const genderMonthMap: Record<string, { male: number; female: number; other: number }> = {};
-  months.forEach((m) => (genderMonthMap[m] = { male: 0, female: 0, other: 0 }));
-  (membersWithGender ?? []).forEach((mb: any) => {
-    const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
-    if (!genderMonthMap[m]) return;
-    if (mb.gender === 'male') genderMonthMap[m].male++;
-    else if (mb.gender === 'female') genderMonthMap[m].female++;
-    else genderMonthMap[m].other++;
-  });
-  const genderData = months.map((month) => ({ month, ...genderMonthMap[month] }));
+    const planMap: Record<string, number> = {};
+    (membershipsWithPlan ?? []).forEach((ms: any) => {
+      const name = ms.plan?.name ?? 'Unknown';
+      planMap[name] = (planMap[name] ?? 0) + 1;
+    });
+    const planData = Object.entries(planMap).map(([name, value]) => ({ name, value }));
 
-  return {
-    stats: {
-      totalMembers: totalMembers ?? 0,
-      activeMembers: activeMembers ?? 0,
-      newThisMonth: newThisMonth ?? 0,
-      checkInsToday: checkInsToday ?? 0,
-      classesToday: classesToday ?? 0,
-      monthlyRevenue,
-    },
-    recentCheckIns: recentCheckIns ?? [],
-    revenueData,
-    memberGrowthData,
-    planData,
-    genderData,
-  };
+    // Gender breakdown per month (last 6)
+    const { data: membersWithGender } = await supabase
+      .from('members')
+      .select('gender, created_at')
+      .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
+
+    const genderMonthMap: Record<string, { male: number; female: number; other: number }> = {};
+    months.forEach((m) => (genderMonthMap[m] = { male: 0, female: 0, other: 0 }));
+    (membersWithGender ?? []).forEach((mb: any) => {
+      const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
+      if (!genderMonthMap[m]) return;
+      if (mb.gender === 'male') genderMonthMap[m].male++;
+      else if (mb.gender === 'female') genderMonthMap[m].female++;
+      else genderMonthMap[m].other++;
+    });
+    const genderData = months.map((month) => ({ month, ...genderMonthMap[month] }));
+
+    return {
+      stats: {
+        totalMembers: totalMembers ?? 0,
+        activeMembers: activeMembers ?? 0,
+        newThisMonth: newThisMonth ?? 0,
+        checkInsToday: checkInsToday ?? 0,
+        classesToday: classesToday ?? 0,
+        monthlyRevenue,
+      },
+      recentCheckIns: recentCheckIns ?? [],
+      revenueData,
+      memberGrowthData,
+      planData,
+      genderData,
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard data during build:', error);
+    return {
+      stats: {
+        totalMembers: 0,
+        activeMembers: 0,
+        newThisMonth: 0,
+        checkInsToday: 0,
+        classesToday: 0,
+        monthlyRevenue: 0,
+      },
+      recentCheckIns: [],
+      revenueData: months.map((month) => ({ month, revenue: 0 })),
+      memberGrowthData: months.map((month) => ({ month, members: 0 })),
+      planData: [],
+      genderData: months.map((month) => ({ month, male: 0, female: 0, other: 0 })),
+    };
+  }
 }
 
 export default async function DashboardPage() {
