@@ -6,7 +6,7 @@ interface DashboardChartsProps {
   revenueData: { month: string; revenue: number }[];
   memberGrowthData: { month: string; members: number }[];
   planData: { name: string; value: number }[];
-  genderData: { month: string; male: number; female: number; other: number }[];
+  genderData: { month: string; male: number; female: number }[];
 }
 
 export default function DashboardCharts({ revenueData, memberGrowthData, planData, genderData }: DashboardChartsProps) {
