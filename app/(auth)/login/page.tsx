@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     const supabase = createClient();
     const emailToAuth = `${username.trim()}@amagym.local`;
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: emailToAuth, password });
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email: emailToAuth, password });
 
     if (authError) {
       setError(authError.message);
@@ -29,7 +29,17 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/dashboard');
+    let redirectPath = '/dashboard';
+    const user = data?.user;
+
+    if (user) {
+      const role = user.user_metadata?.role;
+      if (role === 'staff') {
+        redirectPath = '/members';
+      }
+    }
+
+    router.push(redirectPath);
     router.refresh();
   }
 
