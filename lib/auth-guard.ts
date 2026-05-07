@@ -17,7 +17,11 @@ export async function requireRole(requiredRole: 'admin' | 'staff') {
     .eq('auth_id', user.id)
     .single();
 
-  const role = profile?.role ?? 'staff';
+  if (!profile) {
+    redirect('/login?error=account-disabled');
+  }
+
+  const role = profile.role;
 
   if (requiredRole === 'admin' && role !== 'admin') {
     redirect('/dashboard?access=denied');
@@ -41,7 +45,11 @@ export async function requirePermission(permissionKey: string) {
     .eq('auth_id', user.id)
     .single();
 
-  const role = profile?.role ?? 'staff';
+  if (!profile) {
+    redirect('/login?error=account-disabled');
+  }
+
+  const role = profile.role;
 
   if (role === 'admin') return role;
 
