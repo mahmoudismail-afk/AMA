@@ -18,12 +18,12 @@ export default async function MembersPage({
   const supabase = await createClient();
   const q = resolvedSearchParams.q ?? '';
   const status = resolvedSearchParams.status ?? '';
-  let query = supabase
+    let query = supabase
     .from('members')
     .select(`
       id, status, created_at,
       profile:profiles(full_name, email, phone, avatar_url),
-      memberships(start_date, end_date, status)
+      memberships(start_date, end_date, status, plan:membership_plans(name))
     `)
     .order('created_at', { ascending: false });
 

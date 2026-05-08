@@ -218,6 +218,7 @@ export default function MembersTable({ members }: MembersTableProps) {
                   <SortIcon state={sortDays} />
                 </button>
               </th>
+              <th>Plan</th>
               <th style={{ textAlign: 'center' }}>Subscription</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
@@ -236,6 +237,7 @@ export default function MembersTable({ members }: MembersTableProps) {
                 .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0];
               const date = active?.start_date ?? earliest?.start_date ?? m.created_at;
               const daysLeft = getDaysLeft(m);
+              const planName = active?.plan?.name ?? '—';
 
               return (
                 <tr key={m.id}>
@@ -280,6 +282,11 @@ export default function MembersTable({ members }: MembersTableProps) {
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td>
+                    <span className="badge" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                      {planName}
+                    </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <Link href={`/members/${m.id}`} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>

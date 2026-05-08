@@ -6,10 +6,8 @@ import {
   LayoutDashboard,
   Users,
   CreditCard,
-  Calendar,
-  UserCheck,
   DollarSign,
-  CheckSquare,
+  History,
   ChevronLeft,
   ChevronRight,
   Settings,
@@ -22,13 +20,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard, id: 'dashboard' },
-  { href: '/members',    label: 'Members',    icon: Users,           id: 'members' },
-  { href: '/checkins',   label: 'Check-ins',  icon: CheckSquare,     id: 'checkins' },
-  { href: '/classes',    label: 'Classes',    icon: Calendar,        id: 'classes' },
-  { href: '/payments',   label: 'Payments',   icon: DollarSign,      id: 'payments' },
-  { href: '/plans',      label: 'Plans',      icon: CreditCard,      id: 'plans' },
-  { href: '/trainers',   label: 'Trainers',   icon: UserCheck,       id: 'trainers' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, id: 'dashboard' },
+  { href: '/members',   label: 'Members',   icon: Users,            id: 'members' },
+  { href: '/payments',  label: 'Payments',  icon: DollarSign,       id: 'payments' },
+  { href: '/plans',     label: 'Plans',     icon: CreditCard,       id: 'plans' },
+  { href: '/history',   label: 'History',   icon: History,          id: 'history' },
 ];
 
 interface SidebarProps {

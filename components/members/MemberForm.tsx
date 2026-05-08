@@ -26,6 +26,7 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
     notes: member?.notes ?? '',
     status: member?.status ?? 'active',
     plan_id: '',
+    custom_price: '',
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -61,6 +62,7 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
         notes: form.notes,
         status: form.status,
         plan_id: form.plan_id || undefined,
+        custom_price: form.custom_price ? parseFloat(form.custom_price) : undefined,
       });
 
       if (result.error) { setError(result.error); setLoading(false); return; }
@@ -158,17 +160,39 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
         {!isEdit && plans.length > 0 && (
           <div className="card">
             <h3 style={{ color: 'var(--text-primary)', marginBottom: '1.25rem' }}>Membership Plan</h3>
-            <div className="form-group">
-              <label className="form-label">Assign Plan <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
-              <select name="plan_id" className="form-input" value={form.plan_id} onChange={handleChange}>
-                <option value="">No plan yet</option>
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — ${p.price} / {p.duration_days} days
-                  </option>
-                ))}
-              </select>
-              <span className="form-hint">A payment record will be created automatically.</span>
+            <div className="grid-2" style={{ gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Assign Plan <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
+                <select name="plan_id" className="form-input" value={form.plan_id} onChange={(e) => {
+                  const pid = e.target.value;
+                  const selectedPlan = plans.find(p => p.id === pid);
+                  setForm(prev => ({
+                    ...prev,
+                    plan_id: pid,
+                    custom_price: selectedPlan ? selectedPlan.price.toString() : ''
+                  }));
+                }}>
+                  <option value="">No plan yet</option>
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — ${p.price} / {p.duration_days} days
+                    </option>
+                  ))}
+                </select>
+                <span className="form-hint">A payment record will be created automatically.</span>
+              </div>
+              
+              {form.plan_id && (
+                <div className="form-group">
+                  <label className="form-label">Payment Amount</label>
+                  <div className="input-with-icon">
+                    <span className="input-icon" style={{ fontSize: '0.875rem', fontWeight: 600 }}>$</span>
+                    <input name="custom_price" type="number" step="0.01" className="form-input"
+                      value={form.custom_price} onChange={handleChange} />
+                  </div>
+                  <span className="form-hint">Overrides plan price for this payment.</span>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -66,8 +66,8 @@ export function MemberGrowthChart({ data }: MemberGrowthChartProps) {
   );
 }
 
-/* ── Plan Distribution Pie Chart ── */
-const PIE_COLORS = ['#6c63ff', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+/* ── Plan Distribution Bar Chart ── */
+const BAR_COLORS = ['#6c63ff', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
 
 interface PlanDistributionChartProps {
   data: { name: string; value: number }[];
@@ -75,20 +75,21 @@ interface PlanDistributionChartProps {
 export function PlanDistributionChart({ data }: PlanDistributionChartProps) {
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <PieChart>
-        <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-          paddingAngle={3} dataKey="value">
-          {data.map((_, i) => (
-            <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} formatter={(val: number) => [val, 'Members']} />
-        <Legend
-          formatter={(value) => (
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>{value}</span>
-          )}
+      <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <Tooltip
+          contentStyle={tooltipStyle}
+          formatter={(val: number) => [val, 'Members']}
+          cursor={{ fill: 'rgba(108,99,255,0.08)' }}
         />
-      </PieChart>
+        <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
+          {data.map((_, i) => (
+            <Cell key={`cell-${i}`} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Phone, Mail, Calendar, CheckSquare, CreditCard,
+  Phone, Mail, Calendar, CreditCard,
   Dumbbell, RefreshCw, AlertCircle, DollarSign, Users
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -29,13 +29,19 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
     start_date: new Date().toISOString().split('T')[0],
     payment_method: 'cash',
     record_payment: true,
+    custom_price: plans[0]?.price?.toString() ?? '',
   });
   const [renewing, setRenewing] = useState(false);
   const [renewError, setRenewError] = useState('');
 
   function handleRenewChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const val = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
-    setRenewForm(prev => ({ ...prev, [e.target.name]: val }));
+    if (e.target.name === 'plan_id') {
+      const selected = plans.find(p => p.id === val);
+      setRenewForm(prev => ({ ...prev, plan_id: val as string, custom_price: selected ? selected.price.toString() : '' }));
+    } else {
+      setRenewForm(prev => ({ ...prev, [e.target.name]: val }));
+    }
   }
 
   async function handleRenew() {
@@ -72,9 +78,10 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
 
     // Record payment if checked
     if (renewForm.record_payment) {
+      const paymentAmount = renewForm.custom_price ? parseFloat(renewForm.custom_price) : plan.price;
       await supabase.from('payments').insert({
         member_id: member.id,
-        amount: plan.price,
+        amount: paymentAmount,
         payment_method: renewForm.payment_method,
         payment_date: renewForm.start_date,
         notes: `Subscription renewal — ${plan.name}`,
@@ -146,7 +153,6 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               {[
                 { label: 'Total Paid', value: formatCurrency(totalPaid), icon: CreditCard, color: '#f59e0b' },
-                { label: 'Check-ins', value: member.check_ins?.length ?? 0, icon: CheckSquare, color: '#10b981' },
                 { label: 'Member Since', value: formatDate(member.created_at), icon: Calendar, color: '#6c63ff' },
               ].map(({ label, value, icon: Icon, color }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -233,29 +239,6 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
             )}
           </div>
 
-          {/* Check-in History */}
-          <div className="card">
-            <h4 style={{ color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CheckSquare size={16} style={{ color: 'var(--primary-light)' }} /> Recent Check-ins
-            </h4>
-            {(member.check_ins ?? []).length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No check-ins recorded yet.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {member.check_ins
-                  .slice()
-                  .sort((a: any, b: any) => b.checked_in_at.localeCompare(a.checked_in_at))
-                  .slice(0, 10)
-                  .map((ci: any) => (
-                    <div key={ci.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem', background: 'var(--bg-base)', borderRadius: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{formatDateTime(ci.checked_in_at)}</span>
-                      <span className="badge badge-success" style={{ marginLeft: 'auto' }}>Checked in</span>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -298,7 +281,7 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
           {selectedPlan && (
             <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '0.875rem', fontSize: '0.8125rem', color: 'var(--text-secondary)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div>
-                <p style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Price</p>
+                <p style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Base Price</p>
                 <p style={{ color: 'var(--success)', fontWeight: 700 }}>{formatCurrency(selectedPlan.price)}</p>
               </div>
               <div>
@@ -316,9 +299,20 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label">Start Date</label>
-            <input name="start_date" type="date" className="form-input" value={renewForm.start_date} onChange={handleRenewChange} />
+          <div className="grid-2" style={{ gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">Start Date</label>
+              <input name="start_date" type="date" className="form-input" value={renewForm.start_date} onChange={handleRenewChange} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Payment Amount</label>
+              <div className="input-with-icon">
+                <span className="input-icon" style={{ fontSize: '0.875rem', fontWeight: 600 }}>$</span>
+                <input name="custom_price" type="number" step="0.01" className="form-input"
+                  value={renewForm.custom_price} onChange={handleRenewChange} disabled={!renewForm.record_payment} />
+              </div>
+            </div>
           </div>
 
           <div style={{ padding: '0.875rem', background: 'var(--bg-base)', borderRadius: 10, border: '1px solid var(--border)' }}>

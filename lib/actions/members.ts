@@ -22,6 +22,7 @@ export async function createMember(formData: {
   notes?: string;
   status: string;
   plan_id?: string;
+  custom_price?: number;
 }) {
   const supabase = getAdminClient();
 
@@ -75,9 +76,11 @@ export async function createMember(formData: {
         status: 'active',
       });
 
+      const paymentAmount = formData.custom_price !== undefined ? formData.custom_price : plan.price;
+
       await supabase.from('payments').insert({
         member_id: newMember.id,
-        amount: plan.price,
+        amount: paymentAmount,
         payment_method: 'cash',
         payment_date: start.toISOString().split('T')[0],
         notes: `Initial plan: ${plan.name}`,

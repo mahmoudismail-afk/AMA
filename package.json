@@ -10,7 +10,8 @@
     "build:worker": "npx opennextjs-cloudflare build",
     "dev:worker": "wrangler dev",
     "preview:worker": "npm run build:worker && npm run dev:worker",
-    "deploy:worker": "npm run build:worker && wrangler deploy"
+    "deploy:worker": "npm run build:worker && wrangler deploy",
+    "backup": "node backup.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
