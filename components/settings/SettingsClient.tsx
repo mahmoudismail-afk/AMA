@@ -16,7 +16,7 @@ export default function SettingsClient({
   profile,
   userId,
   allUsers,
-  staffPermissions = ['dashboard', 'members', 'checkins', 'classes'],
+  staffPermissions = ['dashboard', 'members', 'payments', 'plans', 'history'],
 }: {
   profile: any;
   userId: string;
@@ -118,20 +118,17 @@ export default function SettingsClient({
 
   // ── Staff Permissions (admin only) ──
   const [staffPerms, setStaffPerms] = useState<string[]>(
-    Array.isArray(staffPermissions) ? staffPermissions : ['dashboard', 'members', 'checkins', 'classes']
+    Array.isArray(staffPermissions) ? staffPermissions : ['dashboard', 'members', 'payments', 'plans', 'history']
   );
   const [permsSaving, setPermsSaving] = useState(false);
   const [permsMsg, setPermsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const AVAILABLE_PERMISSIONS = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'members', label: 'Members' },
-    { id: 'checkins', label: 'Check-ins' },
-    { id: 'classes', label: 'Classes' },
-    { id: 'payments', label: 'Payments' },
-    { id: 'plans', label: 'Plans' },
-    { id: 'trainers', label: 'Trainers' },
-    { id: 'reports', label: 'Reports' },
+    { id: 'members',   label: 'Members' },
+    { id: 'payments',  label: 'Payments' },
+    { id: 'plans',     label: 'Plans' },
+    { id: 'history',   label: 'History' },
   ];
 
   async function handleSavePermissions() {

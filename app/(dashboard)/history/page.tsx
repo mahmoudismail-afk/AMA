@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatCurrency } from '@/lib/utils';
 import { Users, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import HistoryClient from '@/components/history/HistoryClient';
+import { requirePermission } from '@/lib/auth-guard';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'History' };
@@ -134,6 +135,7 @@ export default async function HistoryPage({
   const resolved = searchParams ? await searchParams : {};
   const currentYear = new Date().getFullYear();
   const year = resolved.year ? parseInt(resolved.year) : currentYear;
+  await requirePermission('history');
 
   const [historyData, availableYears] = await Promise.all([
     getHistoryData(year),
