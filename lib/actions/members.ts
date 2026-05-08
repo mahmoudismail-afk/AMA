@@ -123,3 +123,68 @@ export async function updateMember(
   revalidatePath(`/members/${memberId}`);
   return { success: true };
 }
+
+export async function renewMembership(
+  memberId: string,
+  formData: {
+    plan_id: string;
+    start_date: string;
+    record_payment: boolean;
+    payment_method: string;
+    custom_price?: number;
+  }
+) {
+  const supabase = getAdminClient();
+
+  const { data: plan } = await supabase
+    .from('membership_plans')
+    .select('*')
+    .eq('id', formData.plan_id)
+    .single();
+
+  if (!plan) return { error: 'Plan not found' };
+
+  const start = new Date(formData.start_date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + plan.duration_days);
+
+  // Expire old active memberships
+  await supabase
+    .from('memberships')
+    .update({ status: 'expired' })
+    .eq('member_id', memberId)
+    .eq('status', 'active');
+
+  // Create new membership
+  const { error: mErr } = await supabase.from('memberships').insert({
+    member_id: memberId,
+    plan_id: formData.plan_id,
+    start_date: start.toISOString().split('T')[0],
+    end_date: end.toISOString().split('T')[0],
+    status: 'active',
+  });
+
+  if (mErr) return { error: mErr.message };
+
+  // Update member status
+  await supabase.from('members').update({ status: 'active' }).eq('id', memberId);
+
+  // Record payment
+  if (formData.record_payment) {
+    const paymentAmount = formData.custom_price !== undefined && !isNaN(formData.custom_price)
+      ? formData.custom_price 
+      : plan.price;
+      
+    await supabase.from('payments').insert({
+      member_id: memberId,
+      amount: paymentAmount,
+      payment_method: formData.payment_method,
+      payment_date: start.toISOString().split('T')[0],
+      notes: `Subscription renewal — ${plan.name}`,
+    });
+  }
+
+  revalidatePath(`/members/${memberId}`);
+  revalidatePath('/members');
+  return { success: true };
+}

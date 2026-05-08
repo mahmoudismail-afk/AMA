@@ -12,6 +12,7 @@ import {
   getInitials, getMemberStatusColor, getMembershipStatusColor, daysRemaining
 } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
+import { renewMembership } from '@/lib/actions/members';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
@@ -48,44 +49,20 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
     if (!renewForm.plan_id) { setRenewError('Please select a plan.'); return; }
     setRenewError('');
     setRenewing(true);
-    const supabase = createClient();
-    const plan = plans.find(p => p.id === renewForm.plan_id);
-    if (!plan) { setRenewError('Plan not found.'); setRenewing(false); return; }
-
-    const startDate = new Date(renewForm.start_date);
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + plan.duration_days);
-    const endDateStr = endDate.toISOString().split('T')[0];
-
-    // Expire old active memberships
-    const oldActive = member.memberships?.filter((m: any) => m.status === 'active') ?? [];
-    for (const m of oldActive) {
-      await supabase.from('memberships').update({ status: 'expired' }).eq('id', m.id);
-    }
-
-    // Create new membership
-    const { error: mErr } = await supabase.from('memberships').insert({
-      member_id: member.id,
+    const paymentAmount = renewForm.custom_price ? parseFloat(renewForm.custom_price) : undefined;
+    
+    const res = await renewMembership(member.id, {
       plan_id: renewForm.plan_id,
       start_date: renewForm.start_date,
-      end_date: endDateStr,
-      status: 'active',
+      record_payment: renewForm.record_payment,
+      payment_method: renewForm.payment_method,
+      custom_price: paymentAmount,
     });
-    if (mErr) { setRenewError(mErr.message); setRenewing(false); return; }
 
-    // Update member status to active
-    await supabase.from('members').update({ status: 'active' }).eq('id', member.id);
-
-    // Record payment if checked
-    if (renewForm.record_payment) {
-      const paymentAmount = renewForm.custom_price ? parseFloat(renewForm.custom_price) : plan.price;
-      await supabase.from('payments').insert({
-        member_id: member.id,
-        amount: paymentAmount,
-        payment_method: renewForm.payment_method,
-        payment_date: renewForm.start_date,
-        notes: `Subscription renewal — ${plan.name}`,
-      });
+    if (res?.error) {
+      setRenewError(res.error);
+      setRenewing(false);
+      return;
     }
 
     setRenewOpen(false);

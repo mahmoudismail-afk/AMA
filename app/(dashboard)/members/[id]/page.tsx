@@ -17,8 +17,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       .select(`
         *, profile:profiles(full_name, email, phone, avatar_url),
         memberships(*, plan:membership_plans(name, price, duration_days)),
-        payments(id, amount, payment_method, payment_date, notes),
-        check_ins(id, checked_in_at)
+        payments(id, amount, payment_method, payment_date, notes)
       `)
       .eq('id', id)
       .single(),

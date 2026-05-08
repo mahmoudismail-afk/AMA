@@ -19,12 +19,7 @@ const TABLES = [
   'membership_plans',
   'members',
   'memberships',
-  'trainers',
-  'class_types',
-  'class_schedules',
-  'class_bookings',
-  'payments',
-  'check_ins'
+  'payments'
 ];
 
 async function backup() {
