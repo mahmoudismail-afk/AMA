@@ -17,11 +17,11 @@ async function getHistoryData(year: number) {
   const yearEnd   = `${year}-12-31`;
 
   const [
-    paymentsRes,
-    membersJoinedRes,
-    membershipsActiveRes,
-    planDataRes,
-    expensesDataRes,
+    { data: payments },
+    { data: membersJoined },
+    { data: membershipsActive },
+    { data: planData },
+    { data: expensesData },
   ] = await Promise.all([
     supabase.from('payments')
       .select('amount, payment_date')
@@ -46,14 +46,10 @@ async function getHistoryData(year: number) {
     supabase.from('expenses')
       .select('amount, date, type')
       .gte('date', yearStart)
-      .lte('date', yearEnd),
+      .lte('date', yearEnd)
+      .then(r => ({ data: r.error ? [] : (r.data ?? []) }))
+      .catch(() => ({ data: [] })),
   ]);
-
-  const payments = paymentsRes.data;
-  const membersJoined = membersJoinedRes.data;
-  const membershipsActive = membershipsActiveRes.data;
-  const planData = planDataRes.data;
-  const expensesData = expensesDataRes.data;
 
   // --- Revenue per month ---
   const revenueByMonth: Record<string, number> = {};

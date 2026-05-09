@@ -28,7 +28,7 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
     if (!phone) return;
     const name = member.profile?.full_name ?? 'there';
     const message = `Hello ${name}, your membership at AMA Gym expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
-    const url = `https://wa.me/${phone.replace(/\\D/g, '')}?text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 

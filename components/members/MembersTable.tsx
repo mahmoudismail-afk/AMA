@@ -37,7 +37,7 @@ export default function MembersTable({ members }: MembersTableProps) {
     if (!phone) return;
     const name = m.profile?.full_name ?? 'there';
     const message = `Hello ${name}, your membership at AMA Gym expires ${dLeft === 0 ? 'today' : dLeft === 1 ? 'tomorrow' : `in ${dLeft} days`}! Don't forget to renew.`;
-    const url = `https://wa.me/${phone.replace(/\\D/g, '')}?text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
