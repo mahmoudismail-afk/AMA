@@ -32,10 +32,10 @@ async function getDashboardData() {
       supabase.from('expenses')
         .select('amount')
         .gte('date', startOfMonth.split('T')[0])
-        .lte('date', new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0])
-        .then(r => ({ data: r.error ? [] : (r.data ?? []) }))
-        .catch(() => ({ data: [] })),
+        .lte('date', new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]),
     ]);
+
+    const expensesData = (expensesThisMonth as any)?.data ?? [];
 
     // Monthly revenue — aggregate per month
     const revenueByMonth: Record<string, number> = {};
@@ -47,7 +47,7 @@ async function getDashboardData() {
 
     const revenueData = months.map((month) => ({ month, revenue: revenueByMonth[month] }));
     const monthlyRevenue = revenueByMonth[months[months.length - 1]] ?? 0;
-    const monthlyExpenses = (expensesThisMonth ?? []).reduce((s, e) => s + Number(e.amount), 0);
+    const monthlyExpenses = (expensesData).reduce((s: number, e: any) => s + Number(e.amount), 0);
     const monthlyProfit = monthlyRevenue - monthlyExpenses;
 
     // New members per month (last 6)
