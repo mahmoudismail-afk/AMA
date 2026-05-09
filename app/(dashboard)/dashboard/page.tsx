@@ -17,11 +17,11 @@ async function getDashboardData() {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
     const [
-      { count: totalMembers },
-      { count: activeMembers },
-      { count: newThisMonth },
-      { data: payments },
-      { data: expensesThisMonth },
+      totalRes,
+      activeRes,
+      newRes,
+      paymentsRes,
+      expensesRes,
     ] = await Promise.all([
       supabase.from('members').select('*', { count: 'exact', head: true }),
       supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -32,10 +32,14 @@ async function getDashboardData() {
       supabase.from('expenses')
         .select('amount')
         .gte('date', startOfMonth.split('T')[0])
-        .lte('date', new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0])
-        .then(r => ({ data: r.error ? [] : (r.data ?? []) }))
-        .catch(() => ({ data: [] })),
+        .lte('date', new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]),
     ]);
+
+    const totalMembers = totalRes.count;
+    const activeMembers = activeRes.count;
+    const newThisMonth = newRes.count;
+    const payments = paymentsRes.data;
+    const expensesThisMonth = expensesRes.data;
 
     // Monthly revenue — aggregate per month
     const revenueByMonth: Record<string, number> = {};
