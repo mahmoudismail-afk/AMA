@@ -4,7 +4,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { DollarSign, Users, CalendarCheck, TrendingUp, Activity } from 'lucide-react';
+import { DollarSign, Users, CalendarCheck, TrendingUp, Activity, ShoppingCart } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -96,7 +96,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function ReportsClient({ payments, members, memberships, plans, classSchedules, classTypes, checkins }: {
+export default function ReportsClient({ payments, members, memberships, plans, classSchedules, classTypes, checkins, inventoryTxns = [], expenses = [] }: {
   payments: any[];
   members: any[];
   memberships: any[];
@@ -104,6 +104,8 @@ export default function ReportsClient({ payments, members, memberships, plans, c
   classSchedules: any[];
   classTypes: any[];
   checkins: any[];
+  inventoryTxns?: any[];
+  expenses?: any[];
 }) {
   const totalRevenue = payments.reduce((s, p) => s + Number(p.amount), 0);
   const activeMembers = members.filter((m) => m.status === 'active').length;
@@ -266,6 +268,59 @@ export default function ReportsClient({ payments, members, memberships, plans, c
               </BarChart>
             </ResponsiveContainer>
           )}
+        </div>
+      </div>
+
+      {/* ── Profit Summary ─────────────────────────────────────── */}
+      <div className="card" style={{ marginTop: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
+          <TrendingUp size={18} style={{ color: '#10b981' }} />
+          <h3 style={{ color: 'var(--text-primary)', fontSize: '1rem' }}>Profit Summary</h3>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          {/* Gym Membership Profit */}
+          {(() => {
+            const gymRevenue = payments.reduce((s: number, p: any) => s + Number(p.amount), 0);
+            const gymExpenses = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
+            const gymProfit = gymRevenue - gymExpenses;
+            return (
+              <div style={{ background: 'var(--bg-base)', borderRadius: 12, padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>🏋️ Gym Membership Revenue</p>
+                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981' }}>{formatCurrency(gymRevenue)}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>Expenses: <span style={{ color: '#ef4444' }}>{formatCurrency(gymExpenses)}</span></p>
+                <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: 6, color: gymProfit >= 0 ? '#10b981' : '#ef4444' }}>Net: {formatCurrency(gymProfit)}</p>
+              </div>
+            );
+          })()}
+          {/* Shop / Inventory Profit */}
+          {(() => {
+            const shopRevenue = inventoryTxns.filter((t: any) => t.type === 'sale').reduce((s: number, t: any) => s + Number(t.total_amount), 0);
+            const shopCosts = inventoryTxns.filter((t: any) => t.type === 'restock').reduce((s: number, t: any) => s + Number(t.total_amount), 0);
+            const shopProfit = shopRevenue - shopCosts;
+            return (
+              <div style={{ background: 'var(--bg-base)', borderRadius: 12, padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>🛒 Shop / Inventory Revenue</p>
+                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#6c63ff' }}>{formatCurrency(shopRevenue)}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>Purchase Costs: <span style={{ color: '#ef4444' }}>{formatCurrency(shopCosts)}</span></p>
+                <p style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: 6, color: shopProfit >= 0 ? '#10b981' : '#ef4444' }}>Net: {formatCurrency(shopProfit)}</p>
+              </div>
+            );
+          })()}
+          {/* Combined Total */}
+          {(() => {
+            const gymRevenue = payments.reduce((s: number, p: any) => s + Number(p.amount), 0);
+            const gymExpenses = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
+            const shopRevenue = inventoryTxns.filter((t: any) => t.type === 'sale').reduce((s: number, t: any) => s + Number(t.total_amount), 0);
+            const shopCosts = inventoryTxns.filter((t: any) => t.type === 'restock').reduce((s: number, t: any) => s + Number(t.total_amount), 0);
+            const totalProfit = (gymRevenue + shopRevenue) - (gymExpenses + shopCosts);
+            return (
+              <div style={{ background: totalProfit >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${totalProfit >= 0 ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, borderRadius: 12, padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>📊 Total Business Profit</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 800, color: totalProfit >= 0 ? '#10b981' : '#ef4444' }}>{formatCurrency(totalProfit)}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>Gym + Shop combined</p>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </>

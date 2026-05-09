@@ -17,6 +17,8 @@ export default async function ReportsPage() {
     { data: classSchedules },
     { data: classTypes },
     { data: checkins },
+    { data: inventoryTxns },
+    { data: expenses },
   ] = await Promise.all([
     supabase.from('payments').select('amount, payment_date, payment_method').order('payment_date'),
     supabase.from('members').select('id, status, created_at'),
@@ -25,6 +27,8 @@ export default async function ReportsPage() {
     supabase.from('class_schedules').select('id, class_type_id, status, start_time'),
     supabase.from('class_types').select('id, name, color'),
     supabase.from('check_ins').select('id, checked_in_at'),
+    supabase.from('inventory_transactions').select('type, total_amount, created_at'),
+    supabase.from('expenses').select('type, amount, date'),
   ]);
 
   return (
@@ -36,6 +40,8 @@ export default async function ReportsPage() {
       classSchedules={classSchedules ?? []}
       classTypes={classTypes ?? []}
       checkins={checkins ?? []}
+      inventoryTxns={inventoryTxns ?? []}
+      expenses={expenses ?? []}
     />
   );
 }

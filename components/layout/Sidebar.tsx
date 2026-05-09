@@ -15,18 +15,20 @@ import {
   Dumbbell,
   Shield,
   Receipt,
+  ShoppingCart,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, id: 'dashboard' },
-  { href: '/members',   label: 'Members',   icon: Users,            id: 'members' },
-  { href: '/payments',  label: 'Payments',  icon: DollarSign,       id: 'payments' },
-  { href: '/plans',     label: 'Plans',     icon: CreditCard,       id: 'plans' },
-  { href: '/expenses',  label: 'Expenses',  icon: Receipt,          id: 'expenses' },
-  { href: '/history',   label: 'History',   icon: History,          id: 'history' },
+  { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, id: 'dashboard' },
+  { href: '/members',    label: 'Members',   icon: Users,           id: 'members' },
+  { href: '/payments',   label: 'Payments',  icon: DollarSign,      id: 'payments' },
+  { href: '/plans',      label: 'Plans',     icon: CreditCard,      id: 'plans' },
+  { href: '/expenses',   label: 'Expenses',  icon: Receipt,         id: 'expenses' },
+  { href: '/inventory',  label: 'Inventory', icon: ShoppingCart,    id: 'inventory' },
+  { href: '/history',    label: 'History',   icon: History,         id: 'history' },
 ];
 
 interface SidebarProps {
