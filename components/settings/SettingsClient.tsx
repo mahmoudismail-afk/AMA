@@ -16,7 +16,7 @@ export default function SettingsClient({
   profile,
   userId,
   allUsers,
-  staffPermissions = ['dashboard', 'members', 'payments', 'plans', 'history'],
+  staffPermissions = ['dashboard', 'members', 'payments', 'plans', 'expenses', 'history'],
 }: {
   profile: any;
   userId: string;
@@ -118,7 +118,7 @@ export default function SettingsClient({
 
   // ── Staff Permissions (admin only) ──
   const [staffPerms, setStaffPerms] = useState<string[]>(
-    Array.isArray(staffPermissions) ? staffPermissions : ['dashboard', 'members', 'payments', 'plans', 'history']
+    Array.isArray(staffPermissions) ? staffPermissions : ['dashboard', 'members', 'payments', 'plans', 'expenses', 'history']
   );
   const [permsSaving, setPermsSaving] = useState(false);
   const [permsMsg, setPermsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -128,6 +128,7 @@ export default function SettingsClient({
     { id: 'members',   label: 'Members' },
     { id: 'payments',  label: 'Payments' },
     { id: 'plans',     label: 'Plans' },
+    { id: 'expenses',  label: 'Expenses' },
     { id: 'history',   label: 'History' },
   ];
 

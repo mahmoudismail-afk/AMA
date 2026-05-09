@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { Users, DollarSign, Activity } from 'lucide-react';
+import { Users, DollarSign, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, getLastNMonths } from '@/lib/utils';
 import StatCard from '@/components/dashboard/StatCard';
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
@@ -21,6 +21,7 @@ async function getDashboardData() {
       { count: activeMembers },
       { count: newThisMonth },
       { data: payments },
+      { data: expensesThisMonth },
     ] = await Promise.all([
       supabase.from('members').select('*', { count: 'exact', head: true }),
       supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -28,6 +29,12 @@ async function getDashboardData() {
       supabase.from('payments')
         .select('amount, payment_date')
         .gte('payment_date', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]),
+      supabase.from('expenses')
+        .select('amount')
+        .gte('date', startOfMonth.split('T')[0])
+        .lte('date', new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0])
+        .then(r => ({ data: r.error ? [] : (r.data ?? []) }))
+        .catch(() => ({ data: [] })),
     ]);
 
     // Monthly revenue — aggregate per month
@@ -40,6 +47,8 @@ async function getDashboardData() {
 
     const revenueData = months.map((month) => ({ month, revenue: revenueByMonth[month] }));
     const monthlyRevenue = revenueByMonth[months[months.length - 1]] ?? 0;
+    const monthlyExpenses = (expensesThisMonth ?? []).reduce((s, e) => s + Number(e.amount), 0);
+    const monthlyProfit = monthlyRevenue - monthlyExpenses;
 
     // New members per month (last 6)
     const { data: membersByMonth } = await supabase
@@ -91,6 +100,8 @@ async function getDashboardData() {
         activeMembers: activeMembers ?? 0,
         newThisMonth: newThisMonth ?? 0,
         monthlyRevenue,
+        monthlyExpenses,
+        monthlyProfit,
       },
       revenueData,
       memberGrowthData,
@@ -105,6 +116,8 @@ async function getDashboardData() {
         activeMembers: 0,
         newThisMonth: 0,
         monthlyRevenue: 0,
+        monthlyExpenses: 0,
+        monthlyProfit: 0,
       },
       revenueData: months.map((month) => ({ month, revenue: 0 })),
       memberGrowthData: months.map((month) => ({ month, members: 0 })),
@@ -131,7 +144,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid-stats" style={{ marginBottom: '1.5rem' }}>
+      <div className="grid-2" style={{ marginBottom: '1.25rem' }}>
         <StatCard
           title="Total Members"
           value={stats.totalMembers}
@@ -148,6 +161,9 @@ export default async function DashboardPage() {
           iconColor="#10b981"
           iconBg="rgba(16,185,129,0.15)"
         />
+      </div>
+
+      <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
         <StatCard
           title="Revenue This Month"
           value={formatCurrency(stats.monthlyRevenue)}
@@ -156,11 +172,18 @@ export default async function DashboardPage() {
           iconBg="rgba(245,158,11,0.15)"
         />
         <StatCard
-          title="New This Month"
-          value={stats.newThisMonth}
-          icon={Users}
-          iconColor="#ec4899"
-          iconBg="rgba(236,72,153,0.15)"
+          title="Expenses This Month"
+          value={formatCurrency(stats.monthlyExpenses)}
+          icon={TrendingDown}
+          iconColor="#ef4444"
+          iconBg="rgba(239,68,68,0.15)"
+        />
+        <StatCard
+          title="Profit This Month"
+          value={formatCurrency(stats.monthlyProfit)}
+          icon={stats.monthlyProfit >= 0 ? TrendingUp : TrendingDown}
+          iconColor={stats.monthlyProfit >= 0 ? '#10b981' : '#ef4444'}
+          iconBg={stats.monthlyProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}
         />
       </div>
 

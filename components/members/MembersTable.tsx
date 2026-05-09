@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Eye, Edit, Trash2, RefreshCw, MessageCircle } from 'lucide-react';
 import { getInitials, getMemberStatusColor, formatDate } from '@/lib/utils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { createClient } from '@/lib/supabase/client';
@@ -31,6 +31,15 @@ export default function MembersTable({ members }: MembersTableProps) {
   const [sortDays, setSortDays] = useState<'none' | 'asc' | 'desc'>('none');
   // 'none' = default, 'asc' = A→Z, 'desc' = Z→A
   const [sortName, setSortName] = useState<'none' | 'asc' | 'desc'>('none');
+  
+  const sendReminder = (m: any, dLeft: number) => {
+    const phone = m.profile?.phone ?? '';
+    if (!phone) return;
+    const name = m.profile?.full_name ?? 'there';
+    const message = `Hello ${name}, your membership at AMA Gym expires ${dLeft === 0 ? 'today' : dLeft === 1 ? 'tomorrow' : `in ${dLeft} days`}! Don't forget to renew.`;
+    const url = `https://wa.me/${phone.replace(/\\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
 
   // Auto-expire: when the table loads, patch any membership/member whose end_date has passed
   useEffect(() => {
@@ -254,7 +263,21 @@ export default function MembersTable({ members }: MembersTableProps) {
                       </div>
                     </div>
                   </td>
-                  <td>{phone || <span style={{ color: 'var(--text-disabled)' }}>—</span>}</td>
+                  <td>
+                    {phone ? (
+                      <a 
+                        href={`https://wa.me/${phone.replace(/\\D/g, '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--primary)', textDecoration: 'none' }}
+                        title="Chat on WhatsApp"
+                      >
+                        {phone}
+                      </a>
+                    ) : (
+                      <span style={{ color: 'var(--text-disabled)' }}>—</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`badge ${getMemberStatusColor(m.status)}`}>
                       {m.status}
@@ -279,6 +302,23 @@ export default function MembersTable({ members }: MembersTableProps) {
                                 : `Expired ${Math.abs(daysLeft)}d ago`
                               : `${daysLeft}d left`}
                           </span>
+                          {daysLeft !== null && daysLeft <= 1 && phone && (
+                            <button
+                              onClick={() => sendReminder(m, daysLeft)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: '0 4px',
+                                cursor: 'pointer',
+                                color: '#25D366',
+                                verticalAlign: 'middle',
+                                marginLeft: '6px'
+                              }}
+                              title="Send WhatsApp Reminder"
+                            >
+                              <MessageCircle size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

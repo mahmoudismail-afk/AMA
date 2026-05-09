@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Phone, Mail, Calendar, CreditCard,
-  Dumbbell, RefreshCw, AlertCircle, DollarSign, Users
+  Dumbbell, RefreshCw, AlertCircle, DollarSign, Users, MessageCircle
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -22,6 +22,15 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
   const activeMembership = member.memberships?.find((m: any) => m.status === 'active');
   const totalPaid = (member.payments ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0);
   const remaining = activeMembership ? daysRemaining(activeMembership.end_date) : null;
+
+  const sendReminder = () => {
+    const phone = member.profile?.phone ?? '';
+    if (!phone) return;
+    const name = member.profile?.full_name ?? 'there';
+    const message = `Hello ${name}, your membership at AMA Gym expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
+    const url = `https://wa.me/${phone.replace(/\\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
 
   // Renew modal state
   const [renewOpen, setRenewOpen] = useState(false);
@@ -99,7 +108,15 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
               {member.profile?.phone && (
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   <Phone size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  {member.profile.phone}
+                  <a 
+                    href={`https://wa.me/${member.profile.phone.replace(/\\D/g, '')}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}
+                    title="Chat on WhatsApp"
+                  >
+                    {member.profile.phone}
+                  </a>
                 </div>
               )}
               {member.gender && (
@@ -154,9 +171,16 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
               <h4 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Dumbbell size={16} style={{ color: 'var(--primary-light)' }} /> Membership
               </h4>
-              <button className="btn btn-primary btn-sm" onClick={() => { setRenewOpen(true); setRenewError(''); }} id="renew-btn">
-                <RefreshCw size={14} /> Renew Subscription
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {remaining !== null && remaining <= 1 && member.profile?.phone && (
+                  <button className="btn btn-secondary btn-sm" style={{ borderColor: '#25D366', color: '#25D366' }} onClick={sendReminder}>
+                    <MessageCircle size={14} /> Send Reminder
+                  </button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={() => { setRenewOpen(true); setRenewError(''); }} id="renew-btn">
+                  <RefreshCw size={14} /> Renew Subscription
+                </button>
+              </div>
             </div>
             {activeMembership ? (
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>

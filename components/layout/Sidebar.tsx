@@ -14,6 +14,7 @@ import {
   LogOut,
   Dumbbell,
   Shield,
+  Receipt,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { href: '/members',   label: 'Members',   icon: Users,            id: 'members' },
   { href: '/payments',  label: 'Payments',  icon: DollarSign,       id: 'payments' },
   { href: '/plans',     label: 'Plans',     icon: CreditCard,       id: 'plans' },
+  { href: '/expenses',  label: 'Expenses',  icon: Receipt,          id: 'expenses' },
   { href: '/history',   label: 'History',   icon: History,          id: 'history' },
 ];
 

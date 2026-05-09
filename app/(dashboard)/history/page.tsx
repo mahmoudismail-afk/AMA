@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { formatCurrency } from '@/lib/utils';
-import { Users, DollarSign, TrendingUp, Calendar } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Calendar, TrendingDown, Receipt } from 'lucide-react';
 import HistoryClient from '@/components/history/HistoryClient';
 import { requirePermission } from '@/lib/auth-guard';
 import type { Metadata } from 'next';
@@ -21,6 +21,7 @@ async function getHistoryData(year: number) {
     { data: membersJoined },
     { data: membershipsActive },
     { data: planData },
+    { data: expensesData },
   ] = await Promise.all([
     supabase.from('payments')
       .select('amount, payment_date')
@@ -41,6 +42,13 @@ async function getHistoryData(year: number) {
       .select('plan:membership_plans(name), start_date')
       .gte('start_date', yearStart)
       .lte('start_date', yearEnd),
+
+    supabase.from('expenses')
+      .select('amount, date, type')
+      .gte('date', yearStart)
+      .lte('date', yearEnd)
+      .then(r => ({ data: r.error ? [] : (r.data ?? []) }))
+      .catch(() => ({ data: [] })),
   ]);
 
   // --- Revenue per month ---
@@ -92,16 +100,45 @@ async function getHistoryData(year: number) {
   const renewalsData = ALL_MONTHS.map(month => ({ month, renewals: renewalsByMonth[month] }));
   const totalRenewals = membershipsActive?.length ?? 0;
 
+  // --- Expenses & Salaries per month ---
+  const expByMonth: Record<string, { expense: number; salary: number }> = {};
+  ALL_MONTHS.forEach(m => (expByMonth[m] = { expense: 0, salary: 0 }));
+  (expensesData ?? []).forEach((e: any) => {
+    const m = new Date(e.date).toLocaleString('en-US', { month: 'short' });
+    if (!expByMonth[m]) return;
+    if (e.type === 'salary') expByMonth[m].salary += Number(e.amount);
+    else expByMonth[m].expense += Number(e.amount);
+  });
+  const monthlyExpensesData = ALL_MONTHS.map(month => ({
+    month,
+    expense: expByMonth[month].expense,
+    salary: expByMonth[month].salary,
+    total: expByMonth[month].expense + expByMonth[month].salary,
+  }));
+  const totalExpenses = (expensesData ?? []).reduce((s: number, e: any) => s + Number(e.amount), 0);
+
+  // --- Profit per month (revenue - expenses) ---
+  const profitData = ALL_MONTHS.map(month => ({
+    month,
+    revenue: revenueByMonth[month],
+    expenses: expByMonth[month].expense + expByMonth[month].salary,
+    profit: revenueByMonth[month] - (expByMonth[month].expense + expByMonth[month].salary),
+  }));
+
   return {
     revenueData,
     memberGrowthData,
     genderData,
     planDistData,
     renewalsData,
+    monthlyExpensesData,
+    profitData,
     stats: {
       totalRevenue,
       totalNewMembers,
       totalRenewals,
+      totalExpenses,
+      netProfit: totalRevenue - totalExpenses,
       avgMonthlyRevenue: Math.round(totalRevenue / 12),
     },
   };
@@ -142,7 +179,7 @@ export default async function HistoryPage({
     getAvailableYears(),
   ]);
 
-  const { stats, revenueData, memberGrowthData, genderData, planDistData, renewalsData } = historyData;
+  const { stats, revenueData, memberGrowthData, genderData, planDistData, renewalsData, monthlyExpensesData, profitData } = historyData;
 
   return (
     <div>
@@ -173,6 +210,8 @@ export default async function HistoryPage({
           { title: `Total Revenue ${year}`, value: formatCurrency(stats.totalRevenue), icon: DollarSign, color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
           { title: 'New Members', value: stats.totalNewMembers, icon: Users, color: 'var(--primary-light)', bg: 'var(--primary-glow)' },
           { title: 'Total Subscriptions', value: stats.totalRenewals, icon: TrendingUp, color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+          { title: `Total Expenses ${year}`, value: formatCurrency(stats.totalExpenses), icon: Receipt, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+          { title: `Net Profit ${year}`, value: formatCurrency(stats.netProfit), icon: stats.netProfit >= 0 ? TrendingUp : TrendingDown, color: stats.netProfit >= 0 ? '#10b981' : '#ef4444', bg: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' },
           { title: 'Avg Monthly Revenue', value: formatCurrency(stats.avgMonthlyRevenue), icon: Calendar, color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
         ].map(({ title, value, icon: Icon, color, bg }) => (
           <div key={title} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
@@ -195,6 +234,8 @@ export default async function HistoryPage({
         genderData={genderData}
         planDistData={planDistData}
         renewalsData={renewalsData}
+        monthlyExpensesData={monthlyExpensesData}
+        profitData={profitData}
       />
     </div>
   );
