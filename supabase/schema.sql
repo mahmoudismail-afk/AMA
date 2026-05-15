@@ -1,15 +1,13 @@
 -- ================================================================
--- AMA Gym — Supabase Database Schema
+-- AMA Gym — Supabase Database Schema (Consolidated)
 -- Run this in your Supabase SQL Editor (supabase.com → SQL Editor)
 -- ================================================================
 
--- ── Enable UUID extension ──
+-- ── Enable Extensions ──
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ================================================================
 -- PROFILES
--- NOTE: id is NOT forced to reference auth.users so that admin
---       can create member profiles without creating auth accounts.
 -- ================================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -22,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Auto-create profile on user signup (for admin/staff who sign up normally)
+-- Auto-create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -75,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.members (
 );
 
 -- ================================================================
--- MEMBERSHIPS (plan assignments per member)
+-- MEMBERSHIPS
 -- ================================================================
 CREATE TABLE IF NOT EXISTS public.memberships (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -101,7 +99,7 @@ CREATE TABLE IF NOT EXISTS public.trainers (
 );
 
 -- ================================================================
--- CLASS TYPES
+-- CLASS TYPES & SCHEDULES
 -- ================================================================
 CREATE TABLE IF NOT EXISTS public.class_types (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -112,9 +110,6 @@ CREATE TABLE IF NOT EXISTS public.class_types (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ================================================================
--- CLASS SCHEDULES
--- ================================================================
 CREATE TABLE IF NOT EXISTS public.class_schedules (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   class_type_id UUID NOT NULL REFERENCES public.class_types(id) ON DELETE CASCADE,
@@ -128,9 +123,6 @@ CREATE TABLE IF NOT EXISTS public.class_schedules (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ================================================================
--- CLASS BOOKINGS
--- ================================================================
 CREATE TABLE IF NOT EXISTS public.class_bookings (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   schedule_id UUID NOT NULL REFERENCES public.class_schedules(id) ON DELETE CASCADE,
@@ -151,7 +143,8 @@ CREATE TABLE IF NOT EXISTS public.payments (
   payment_method  TEXT NOT NULL DEFAULT 'cash' CHECK (payment_method IN ('cash', 'card', 'bank_transfer', 'other')),
   payment_date    DATE NOT NULL DEFAULT CURRENT_DATE,
   notes           TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at      TIMESTAMPTZ -- Soft delete support
 );
 
 -- ================================================================
@@ -166,61 +159,91 @@ CREATE TABLE IF NOT EXISTS public.check_ins (
 );
 
 -- ================================================================
+-- INVENTORY (Merged from inventory_migration.sql)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.inventory_items (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name                TEXT NOT NULL,
+  category            TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('drinks', 'snacks', 'supplements', 'other')),
+  cost_price          NUMERIC(10,2) NOT NULL DEFAULT 0,
+  sell_price          NUMERIC(10,2) NOT NULL DEFAULT 0,
+  stock_qty           INTEGER NOT NULL DEFAULT 0,
+  low_stock_threshold INTEGER NOT NULL DEFAULT 5,
+  is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.inventory_transactions (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  item_id      UUID NOT NULL REFERENCES public.inventory_items(id) ON DELETE CASCADE,
+  type         TEXT NOT NULL CHECK (type IN ('sale', 'restock')),
+  quantity     INTEGER NOT NULL,
+  unit_price   NUMERIC(10,2) NOT NULL,
+  total_amount NUMERIC(10,2) NOT NULL,
+  notes        TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ================================================================
+-- EXPENSES (New)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.expenses (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  type         TEXT NOT NULL CHECK (type IN ('expense', 'salary')),
+  title        TEXT NOT NULL,
+  amount       NUMERIC(10, 2) NOT NULL,
+  date         DATE NOT NULL DEFAULT CURRENT_DATE,
+  is_recurring BOOLEAN DEFAULT FALSE,
+  notes        TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ================================================================
+-- SYSTEM SETTINGS (New)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.system_settings (
+  key   TEXT PRIMARY KEY,
+  value JSONB NOT NULL DEFAULT '{}'
+);
+
+-- ================================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ================================================================
+ALTER TABLE public.profiles             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.members              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.membership_plans      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.memberships          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trainers             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_types          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_schedules      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_bookings       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.check_ins            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_items      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_settings       ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE public.profiles        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.members         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.membership_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.memberships     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.trainers        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.class_types     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.class_schedules ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.class_bookings  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payments        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.check_ins       ENABLE ROW LEVEL SECURITY;
+-- Profiles: all authenticated users can read; update own
+CREATE POLICY "Profiles viewable by authenticated" ON public.profiles FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "Profiles updateable by own user" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = auth_id);
+CREATE POLICY "Service role full access profiles" ON public.profiles FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
 
--- Profiles: all authenticated users can read; update own by auth_id
-CREATE POLICY "Profiles are viewable by authenticated users"
-  ON public.profiles FOR SELECT TO authenticated USING (TRUE);
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = auth_id);
--- Service role can insert profiles (for member creation without auth account)
-CREATE POLICY "Service role can insert profiles"
-  ON public.profiles FOR INSERT TO service_role WITH CHECK (TRUE);
-CREATE POLICY "Service role can manage profiles"
-  ON public.profiles FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
-
--- All other tables: full access for authenticated users
-CREATE POLICY "Authenticated users have full access to members"
-  ON public.members FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Service role full access to members"
-  ON public.members FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
-
-CREATE POLICY "Authenticated users have full access to membership_plans"
-  ON public.membership_plans FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-
-CREATE POLICY "Authenticated users have full access to memberships"
-  ON public.memberships FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Service role full access to memberships"
-  ON public.memberships FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
-
-CREATE POLICY "Authenticated users have full access to trainers"
-  ON public.trainers FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Authenticated users have full access to class_types"
-  ON public.class_types FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Authenticated users have full access to class_schedules"
-  ON public.class_schedules FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Authenticated users have full access to class_bookings"
-  ON public.class_bookings FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-
-CREATE POLICY "Authenticated users have full access to payments"
-  ON public.payments FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Service role full access to payments"
-  ON public.payments FOR ALL TO service_role USING (TRUE) WITH CHECK (TRUE);
-
-CREATE POLICY "Authenticated users have full access to check_ins"
-  ON public.check_ins FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+-- General tables: Full access for authenticated users (Admin/Staff)
+-- In a more complex app, you'd check profile.role here.
+CREATE POLICY "Authenticated users full access" ON public.members FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access plans" ON public.membership_plans FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access memberships" ON public.memberships FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access trainers" ON public.trainers FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access class_types" ON public.class_types FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access schedules" ON public.class_schedules FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access bookings" ON public.class_bookings FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access payments" ON public.payments FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access check_ins" ON public.check_ins FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access inventory_items" ON public.inventory_items FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access inventory_transactions" ON public.inventory_transactions FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access expenses" ON public.expenses FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Authenticated users full access settings" ON public.system_settings FOR ALL TO authenticated USING (TRUE) WITH CHECK (TRUE);
 
 -- ================================================================
 -- SEED DATA
@@ -239,4 +262,10 @@ INSERT INTO public.class_types (name, description, color) VALUES
   ('Pilates',    'Core strength and flexibility',     '#8b5cf6'),
   ('Zumba',      'Dance fitness and fun',             '#ec4899'),
   ('Boxing',     'Combat fitness training',           '#f97316')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.system_settings (key, value) VALUES
+  ('gym_name', '"AMA Gym"'),
+  ('currency', '"USD"'),
+  ('tax_rate', '0')
 ON CONFLICT DO NOTHING;

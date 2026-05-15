@@ -46,9 +46,7 @@ async function getHistoryData(year: number) {
     supabase.from('expenses')
       .select('amount, date, type')
       .gte('date', yearStart)
-      .lte('date', yearEnd)
-      .then(r => ({ data: r.error ? [] : (r.data ?? []) }))
-      .catch(() => ({ data: [] })),
+      .lte('date', yearEnd),
   ]);
 
   // --- Revenue per month ---
