@@ -72,7 +72,7 @@ function LoginForm() {
         <div className="auth-logo-icon">
           <Dumbbell size={28} />
         </div>
-        <span className="auth-logo-text">AMA Gym</span>
+        <span className="auth-logo-text">GYM demo</span>
       </div>
 
       <div className="auth-header">

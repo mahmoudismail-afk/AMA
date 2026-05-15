@@ -24,11 +24,12 @@ interface HistoryClientProps {
   renewalsData: { month: string; renewals: number }[];
   monthlyExpensesData: { month: string; expense: number; salary: number; total: number }[];
   profitData: { month: string; revenue: number; expenses: number; profit: number }[];
+  inventoryData: { month: string; sales: number; restocks: number }[];
 }
 
 export default function HistoryClient({
   year, revenueData, memberGrowthData, genderData, planDistData, renewalsData,
-  monthlyExpensesData, profitData,
+  monthlyExpensesData, profitData, inventoryData,
 }: HistoryClientProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -219,6 +220,32 @@ export default function HistoryClient({
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      {/* Inventory Sales vs Restocks — full width */}
+      <div className="chart-card">
+        <div className="chart-card-header">
+          <div>
+            <p className="chart-card-title">Inventory — Sales vs Restocks — {year}</p>
+            <p className="chart-card-subtitle">Monthly inventory activity: revenue from sales and cost of restocks</p>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={inventoryData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false}
+              tickFormatter={v => `$${v >= 1000 ? `${v / 1000}k` : v}`} />
+            <Tooltip contentStyle={tooltipStyle}
+              formatter={(val: number, name: string) => [`$${val.toLocaleString()}`, name.charAt(0).toUpperCase() + name.slice(1)]}
+              cursor={{ fill: 'rgba(6,182,212,0.08)' }} />
+            <Legend formatter={v => (
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', textTransform: 'capitalize' }}>{v}</span>
+            )} />
+            <Bar dataKey="sales"    fill="#06b6d4" radius={[4, 4, 0, 0]} maxBarSize={36} />
+            <Bar dataKey="restocks" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={36} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

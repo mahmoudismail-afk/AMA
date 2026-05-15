@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { formatCurrency } from '@/lib/utils';
-import { Users, DollarSign, TrendingUp, Calendar, TrendingDown, Receipt } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Calendar, TrendingDown, Receipt, ShoppingCart } from 'lucide-react';
 import HistoryClient from '@/components/history/HistoryClient';
 import { requirePermission } from '@/lib/auth-guard';
 import type { Metadata } from 'next';
@@ -22,6 +22,7 @@ async function getHistoryData(year: number) {
     { data: membershipsActive },
     { data: planData },
     { data: expensesData },
+    { data: inventoryTxData },
   ] = await Promise.all([
     supabase.from('payments')
       .select('amount, payment_date')
@@ -47,6 +48,11 @@ async function getHistoryData(year: number) {
       .select('amount, date, type')
       .gte('date', yearStart)
       .lte('date', yearEnd),
+
+    supabase.from('inventory_transactions')
+      .select('type, total_amount, created_at')
+      .gte('created_at', `${yearStart}T00:00:00`)
+      .lte('created_at', `${yearEnd}T23:59:59`),
   ]);
 
   // --- Revenue per month ---
@@ -123,6 +129,22 @@ async function getHistoryData(year: number) {
     profit: revenueByMonth[month] - (expByMonth[month].expense + expByMonth[month].salary),
   }));
 
+  // --- Inventory sales & restocks per month ---
+  const invByMonth: Record<string, { sales: number; restocks: number }> = {};
+  ALL_MONTHS.forEach(m => (invByMonth[m] = { sales: 0, restocks: 0 }));
+  (inventoryTxData ?? []).forEach((tx: any) => {
+    const m = new Date(tx.created_at).toLocaleString('en-US', { month: 'short' });
+    if (!invByMonth[m]) return;
+    if (tx.type === 'sale') invByMonth[m].sales += Number(tx.total_amount);
+    else if (tx.type === 'restock') invByMonth[m].restocks += Number(tx.total_amount);
+  });
+  const inventoryData = ALL_MONTHS.map(month => ({
+    month,
+    sales: invByMonth[month].sales,
+    restocks: invByMonth[month].restocks,
+  }));
+  const totalInventorySales = (inventoryTxData ?? []).filter((t: any) => t.type === 'sale').reduce((s: number, t: any) => s + Number(t.total_amount), 0);
+
   return {
     revenueData,
     memberGrowthData,
@@ -131,6 +153,7 @@ async function getHistoryData(year: number) {
     renewalsData,
     monthlyExpensesData,
     profitData,
+    inventoryData,
     stats: {
       totalRevenue,
       totalNewMembers,
@@ -138,6 +161,7 @@ async function getHistoryData(year: number) {
       totalExpenses,
       netProfit: totalRevenue - totalExpenses,
       avgMonthlyRevenue: Math.round(totalRevenue / 12),
+      totalInventorySales,
     },
   };
 }
@@ -177,7 +201,7 @@ export default async function HistoryPage({
     getAvailableYears(),
   ]);
 
-  const { stats, revenueData, memberGrowthData, genderData, planDistData, renewalsData, monthlyExpensesData, profitData } = historyData;
+  const { stats, revenueData, memberGrowthData, genderData, planDistData, renewalsData, monthlyExpensesData, profitData, inventoryData } = historyData;
 
   return (
     <div>
@@ -211,6 +235,7 @@ export default async function HistoryPage({
           { title: `Total Expenses ${year}`, value: formatCurrency(stats.totalExpenses), icon: Receipt, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
           { title: `Net Profit ${year}`, value: formatCurrency(stats.netProfit), icon: stats.netProfit >= 0 ? TrendingUp : TrendingDown, color: stats.netProfit >= 0 ? '#10b981' : '#ef4444', bg: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' },
           { title: 'Avg Monthly Revenue', value: formatCurrency(stats.avgMonthlyRevenue), icon: Calendar, color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+          { title: `Inventory Sales ${year}`, value: formatCurrency(stats.totalInventorySales), icon: ShoppingCart, color: '#06b6d4', bg: 'rgba(6,182,212,0.15)' },
         ].map(({ title, value, icon: Icon, color, bg }) => (
           <div key={title} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -234,6 +259,7 @@ export default async function HistoryPage({
         renewalsData={renewalsData}
         monthlyExpensesData={monthlyExpensesData}
         profitData={profitData}
+        inventoryData={inventoryData}
       />
     </div>
   );

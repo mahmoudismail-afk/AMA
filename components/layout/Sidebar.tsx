@@ -65,7 +65,7 @@ export default function Sidebar({ mobileOpen, onClose, role = 'staff', staffPerm
         <div className="sidebar-logo-icon">
           <Dumbbell size={22} />
         </div>
-        {!collapsed && <span className="sidebar-logo-text">AMA Gym</span>}
+        {!collapsed && <span className="sidebar-logo-text">GYM demo</span>}
       </div>
 
       {/* Collapse toggle */}

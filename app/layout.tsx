@@ -3,8 +3,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'AMA Gym — Management System',
-    template: '%s | AMA Gym',
+    default: 'GYM demo — Management System',
+    template: '%s | GYM demo',
   },
   description:
     'A modern gym management system to manage members, classes, trainers, payments, and more.',

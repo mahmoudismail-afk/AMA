@@ -265,7 +265,7 @@ INSERT INTO public.class_types (name, description, color) VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.system_settings (key, value) VALUES
-  ('gym_name', '"AMA Gym"'),
+  ('gym_name', '"GYM demo"'),
   ('currency', '"USD"'),
   ('tax_rate', '0')
 ON CONFLICT DO NOTHING;
