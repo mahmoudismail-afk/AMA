@@ -10,6 +10,7 @@ const nextConfig = {
       },
     ],
   },
+  output: 'standalone',
   // Redirect root to /dashboard at the config level (avoids the page manifest issue)
   async redirects() {
     return [
