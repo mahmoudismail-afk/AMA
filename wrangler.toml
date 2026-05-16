@@ -4,8 +4,7 @@ account_id = "ceecf663e208c1a08fea630af5517c8f"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
-[build]
-command = "npm run build:worker"
+
 
 [assets]
 directory = ".open-next/assets"
