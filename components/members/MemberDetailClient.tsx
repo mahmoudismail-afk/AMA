@@ -4,19 +4,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Phone, Mail, Calendar, CreditCard,
-  Dumbbell, RefreshCw, AlertCircle, DollarSign, Users, MessageCircle
+  Scissors, RefreshCw, AlertCircle, DollarSign, Users, MessageCircle
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
-  formatDate, formatDateTime, formatCurrency,
+  formatDate, formatDateTime, formatCurrency, formatLBP, usdToLbp,
   getInitials, getMemberStatusColor, getMembershipStatusColor, daysRemaining
 } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import { renewMembership } from '@/lib/actions/members';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
-export default function MemberDetailClient({ member, plans }: { member: any; plans: any[] }) {
+export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: { member: any; plans: any[]; lbpRate?: number }) {
   const router = useRouter();
   const name = member.profile?.full_name ?? 'Unknown';
   const activeMembership = member.memberships?.find((m: any) => m.status === 'active');
@@ -27,7 +28,7 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
     const phone = member.profile?.phone ?? '';
     if (!phone) return;
     const name = member.profile?.full_name ?? 'there';
-    const message = `Hello ${name}, your membership at AMA Gym expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
+    const message = `Hello ${name}, your membership at Salon Raed expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -119,12 +120,7 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
                   </a>
                 </div>
               )}
-              {member.gender && (
-                <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
-                  <Users size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  {member.gender}
-                </div>
-              )}
+
               {member.date_of_birth && (
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   <Calendar size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -156,6 +152,9 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
                   <div>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{label}</p>
                     <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{String(value)}</p>
+                    {label === 'Total Paid' && (
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{formatLBP(usdToLbp(totalPaid, lbpRate))}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -169,7 +168,7 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h4 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Dumbbell size={16} style={{ color: 'var(--primary-light)' }} /> Membership
+                <Scissors size={16} style={{ color: 'var(--primary-light)' }} /> Membership
               </h4>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {remaining !== null && remaining <= 1 && member.profile?.phone && (
@@ -229,7 +228,11 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
                     {member.payments.slice().sort((a: any, b: any) => b.payment_date.localeCompare(a.payment_date)).map((p: any) => (
                       <tr key={p.id}>
                         <td>{formatDate(p.payment_date)}</td>
-                        <td style={{ color: 'var(--success)', fontWeight: 600 }}>{formatCurrency(p.amount)}</td>
+                        <td style={{ color: 'var(--success)', fontWeight: 600 }}>
+                          {formatCurrency(p.amount)}
+                          <br />
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>{formatLBP(usdToLbp(p.amount, lbpRate))}</span>
+                        </td>
                         <td><span className="badge badge-neutral">{p.payment_method.replace('_', ' ')}</span></td>
                         <td style={{ color: 'var(--text-muted)' }}>{p.notes || '—'}</td>
                       </tr>
@@ -308,11 +311,13 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
 
             <div className="form-group">
               <label className="form-label">Payment Amount</label>
-              <div className="input-with-icon">
-                <span className="input-icon" style={{ fontSize: '0.875rem', fontWeight: 600 }}>$</span>
-                <input name="custom_price" type="number" step="0.01" className="form-input"
-                  value={renewForm.custom_price} onChange={handleRenewChange} disabled={!renewForm.record_payment} />
-              </div>
+              <CurrencyInput
+                valueUsd={renewForm.custom_price}
+                onChange={(val) => setRenewForm(prev => ({ ...prev, custom_price: val }))}
+                lbpRate={lbpRate}
+                disabled={!renewForm.record_payment}
+                id="renew-custom-price"
+              />
             </div>
           </div>
 

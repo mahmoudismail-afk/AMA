@@ -12,7 +12,7 @@ import {
   ChevronRight,
   Settings,
   LogOut,
-  Dumbbell,
+  Scissors,
   Shield,
   Receipt,
   ShoppingCart,
@@ -63,9 +63,9 @@ export default function Sidebar({ mobileOpen, onClose, role = 'staff', staffPerm
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <Dumbbell size={22} />
+          <Scissors size={22} />
         </div>
-        {!collapsed && <span className="sidebar-logo-text">GYM demo</span>}
+        {!collapsed && <span className="sidebar-logo-text">Salon Raed</span>}
       </div>
 
       {/* Collapse toggle */}

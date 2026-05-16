@@ -3,12 +3,12 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'GYM demo — Management System',
-    template: '%s | GYM demo',
+    default: 'Salon Raed — Management System',
+    template: '%s | Salon Raed',
   },
   description:
-    'A modern gym management system to manage members, classes, trainers, payments, and more.',
-  keywords: ['gym', 'management', 'fitness', 'members', 'classes'],
+    'A premium salon management system to manage clients, bookings, staff, and payments.',
+  keywords: ['salon', 'management', 'beauty', 'haircut', 'bookings'],
 };
 
 export default function RootLayout({

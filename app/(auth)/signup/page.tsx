@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Dumbbell, Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Scissors, Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { registerAdmin } from '@/lib/actions/auth';
 import '../auth.css';
@@ -59,7 +59,7 @@ export default function SignupPage() {
     // Since the account is created and auto-confirmed by the server action,
     // we can immediately log them in on the client side to establish the session.
     const supabase = createClient();
-    const emailToAuth = `${formData.username.trim()}@amagym.local`;
+    const emailToAuth = `${formData.username.trim()}@salonraed.local`;
     
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: emailToAuth,
@@ -90,14 +90,14 @@ export default function SignupPage() {
       <div className="auth-card animate-slide">
         <div className="auth-logo">
           <div className="auth-logo-icon">
-            <Dumbbell size={28} />
+            <Scissors size={28} />
           </div>
-          <span className="auth-logo-text">AMA Gym</span>
+          <span className="auth-logo-text">Salon Raed</span>
         </div>
 
         <div className="auth-header">
           <h1 className="auth-title">Create your account</h1>
-          <p className="auth-subtitle">Set up your gym management system</p>
+          <p className="auth-subtitle">Set up your salon management dashboard</p>
         </div>
 
         {error && (

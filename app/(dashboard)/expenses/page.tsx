@@ -12,12 +12,14 @@ export default async function ExpensesPage() {
 
   const supabase = await createClient();
   let expenses: any[] = [];
+  let lbpRate = 90000;
   try {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .order('date', { ascending: false });
+    const [{ data, error }, { data: rateSetting }] = await Promise.all([
+      supabase.from('expenses').select('*').order('date', { ascending: false }),
+      supabase.from('system_settings').select('value').eq('key', 'lbp_rate').single(),
+    ]);
     if (!error) expenses = data ?? [];
+    if (rateSetting) lbpRate = Number(rateSetting.value) || 90000;
   } catch {
     // table not yet created
   }
@@ -33,7 +35,7 @@ export default async function ExpensesPage() {
         </div>
       </div>
 
-      <ExpensesClient initialExpenses={expenses ?? []} />
+      <ExpensesClient initialExpenses={expenses ?? []} lbpRate={lbpRate} />
     </div>
   );
 }

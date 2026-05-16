@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, Trash2, Check, X, Dumbbell } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, X, Scissors } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
@@ -90,7 +90,7 @@ export default function PlansClient({ plans: initialPlans }: { plans: Plan[] }) 
       <div className="page-header">
         <div>
           <h1 className="page-title">Membership Plans</h1>
-          <p className="page-subtitle">{plans.length} plan{plans.length !== 1 ? 's' : ''} configured</p>
+          <p className="page-subtitle">{plans.length} plan{plans.length !== 1 ? 's' : ''} configured at Salon Raed</p>
         </div>
         <button className="btn btn-primary" onClick={openNew} id="add-plan-btn">
           <Plus size={16} /> New Plan
@@ -108,7 +108,7 @@ export default function PlansClient({ plans: initialPlans }: { plans: Plan[] }) 
             )}
             <div style={{ marginBottom: '1rem' }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.875rem' }}>
-                <Dumbbell size={22} style={{ color: 'var(--primary-light)' }} />
+                <Scissors size={22} style={{ color: 'var(--primary-light)' }} />
               </div>
               <h3 style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{p.name}</h3>
               {p.description && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{p.description}</p>}
@@ -145,7 +145,7 @@ export default function PlansClient({ plans: initialPlans }: { plans: Plan[] }) 
 
         {plans.length === 0 && (
           <div className="card empty-state" style={{ gridColumn: '1 / -1' }}>
-            <div className="empty-state-icon"><Dumbbell size={28} /></div>
+            <div className="empty-state-icon"><Scissors size={28} /></div>
             <h3 style={{ color: 'var(--text-primary)' }}>No plans yet</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Create your first membership plan.</p>
             <button className="btn btn-primary btn-sm" onClick={openNew}>Create Plan</button>

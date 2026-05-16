@@ -19,7 +19,6 @@ interface HistoryClientProps {
   year: number;
   revenueData: { month: string; revenue: number }[];
   memberGrowthData: { month: string; members: number }[];
-  genderData: { month: string; male: number; female: number }[];
   planDistData: { name: string; value: number }[];
   renewalsData: { month: string; renewals: number }[];
   monthlyExpensesData: { month: string; expense: number; salary: number; total: number }[];
@@ -28,7 +27,7 @@ interface HistoryClientProps {
 }
 
 export default function HistoryClient({
-  year, revenueData, memberGrowthData, genderData, planDistData, renewalsData,
+  year, revenueData, memberGrowthData, planDistData, renewalsData,
   monthlyExpensesData, profitData, inventoryData,
 }: HistoryClientProps) {
   return (
@@ -168,28 +167,6 @@ export default function HistoryClient({
           </ResponsiveContainer>
         </div>
 
-        {/* Gender breakdown */}
-        <div className="chart-card">
-          <div className="chart-card-header">
-            <div>
-              <p className="chart-card-title">Gender Breakdown — {year}</p>
-              <p className="chart-card-subtitle">New members by gender per month</p>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={genderData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(108,99,255,0.08)' }} />
-              <Legend formatter={v => (
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', textTransform: 'capitalize' }}>{v}</span>
-              )} />
-              <Bar dataKey="male"   stackId="a" fill="#06b6d4" />
-              <Bar dataKey="female" stackId="a" fill="#ec4899" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
 
         {/* Plan distribution */}
         <div className="chart-card">

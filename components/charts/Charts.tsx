@@ -94,29 +94,81 @@ export function PlanDistributionChart({ data }: PlanDistributionChartProps) {
   );
 }
 
-/* ── Gender Breakdown Bar Chart ── */
-interface GenderChartProps {
-  data: { month: string; male: number; female: number }[];
+/* ── Today's Revenue — Hourly Bar Chart ── */
+interface DailyRevenueChartProps {
+  data: { hour: string; revenue: number }[];
 }
-export function GenderChart({ data }: GenderChartProps) {
+export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={240}>
+    <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#06b6d4" stopOpacity={0.9} />
+            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.5} />
+          </linearGradient>
+        </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-        <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <XAxis
+          dataKey="hour"
+          tick={{ fill: '#64748b', fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          interval={2}
+        />
+        <YAxis
+          tick={{ fill: '#64748b', fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `$${v >= 1000 ? `${v / 1000}k` : v}`}
+        />
         <Tooltip
           contentStyle={tooltipStyle}
-          cursor={{ fill: 'rgba(108,99,255,0.08)' }}
+          formatter={(val: number) => [`$${val.toLocaleString()}`, 'Revenue']}
+          cursor={{ fill: 'rgba(6,182,212,0.08)' }}
         />
-        <Legend
-          formatter={(value) => (
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', textTransform: 'capitalize' }}>{value}</span>
-          )}
-        />
-        <Bar dataKey="male" stackId="a" fill="#06b6d4" />
-        <Bar dataKey="female" stackId="a" fill="#ec4899" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="revenue" fill="url(#dailyGrad)" radius={[3, 3, 0, 0]} maxBarSize={18} />
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* ── Weekly Revenue — Area Chart (last 7 days) ── */
+interface WeeklyRevenueChartProps {
+  data: { day: string; revenue: number }[];
+}
+export function WeeklyRevenueChart({ data }: WeeklyRevenueChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="weeklyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <YAxis
+          tick={{ fill: '#64748b', fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `$${v >= 1000 ? `${v / 1000}k` : v}`}
+        />
+        <Tooltip
+          contentStyle={tooltipStyle}
+          formatter={(val: number) => [`$${val.toLocaleString()}`, 'Revenue']}
+        />
+        <Area
+          type="monotone"
+          dataKey="revenue"
+          stroke="#8b5cf6"
+          strokeWidth={2.5}
+          fill="url(#weeklyGrad)"
+          dot={{ fill: '#8b5cf6', r: 4, strokeWidth: 0 }}
+          activeDot={{ r: 6, fill: '#8b5cf6' }}
+        />
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 interface StatCardProps {
   title: string;
   value: string | number;
+  subValue?: string;
   icon: LucideIcon;
   iconColor?: string;
   iconBg?: string;
@@ -16,6 +17,7 @@ interface StatCardProps {
 export default function StatCard({
   title,
   value,
+  subValue,
   icon: Icon,
   iconColor = 'var(--primary-light)',
   iconBg = 'var(--primary-glow)',
@@ -36,6 +38,11 @@ export default function StatCard({
           <p className="stat-value">
             {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
           </p>
+          {subValue && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', letterSpacing: '0.01em' }}>
+              {subValue}
+            </p>
+          )}
         </div>
         <div className="stat-icon" style={{ background: iconBg, color: iconColor }}>
           <Icon size={22} />

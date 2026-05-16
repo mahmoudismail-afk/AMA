@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { Users, DollarSign, Activity, TrendingUp, TrendingDown } from 'lucide-react';
-import { formatCurrency, getLastNMonths } from '@/lib/utils';
+import { formatCurrency, formatLBP, usdToLbp, getLastNMonths } from '@/lib/utils';
 import StatCard from '@/components/dashboard/StatCard';
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
+import DashboardRefresher from '@/components/dashboard/DashboardRefresher';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Dashboard' };
@@ -13,8 +14,29 @@ async function getDashboardData() {
   try {
     const supabase = await createClient();
     const now = new Date();
+
+    // Fetch LBP exchange rate from settings (default 90000)
+    const { data: rateSetting } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'lbp_rate')
+      .single();
+    const lbpRate: number = rateSetting ? Number(rateSetting.value) || 90000 : 90000;
+
+    // Date boundaries
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+    // Start of current week (Monday)
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sun wraps to 6
+    startOfWeek.setDate(now.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const todayStr      = now.toISOString().split('T')[0];
+    const weekStartStr  = startOfWeek.toISOString().split('T')[0];
+    const monthStartStr = startOfMonth.split('T')[0];
+    const monthEndStr   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
     const [
       { count: totalMembers },
@@ -22,33 +44,59 @@ async function getDashboardData() {
       { count: newThisMonth },
       { data: payments },
       { data: expensesThisMonth },
+      { data: weekPayments },
     ] = await Promise.all([
       supabase.from('members').select('*', { count: 'exact', head: true }),
       supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
       supabase.from('members').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
       supabase.from('payments')
         .select('amount, payment_date')
-        .gte('payment_date', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]),
+        .gte('payment_date', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0])
+        .is('deleted_at', null),
       supabase.from('expenses')
         .select('amount')
-        .gte('date', startOfMonth.split('T')[0])
-        .lte('date', new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]),
+        .gte('date', monthStartStr)
+        .lte('date', monthEndStr),
+      // Last 7 days: fetch for day-level grouping
+      supabase.from('payments')
+        .select('amount, payment_date')
+        .gte('payment_date', weekStartStr)
+        .lte('payment_date', todayStr)
+        .is('deleted_at', null),
     ]);
 
-    // Monthly revenue — aggregate per month
+
+    // ── Weekly chart: Mon → today ──
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekDays: { date: string; day: string; revenue: number }[] = [];
+    const totalDays = daysFromMonday + 1; // Mon=1 day, Tue=2 days, ... today
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      const dateStr  = d.toISOString().split('T')[0];
+      const dayLabel = i === totalDays - 1 ? 'Today' : DAYS[d.getDay()];
+      weekDays.push({ date: dateStr, day: dayLabel, revenue: 0 });
+    }
+    (weekPayments ?? []).forEach((p: any) => {
+      const entry = weekDays.find(d => d.date === p.payment_date);
+      if (entry) entry.revenue += Number(p.amount);
+    });
+    const weeklyChartData = weekDays.map(({ day, revenue }) => ({ day, revenue }));
+    const weeklyRevenue = weekDays.reduce((s, d) => s + d.revenue, 0);
+
+    // ── Monthly revenue per month ──
     const revenueByMonth: Record<string, number> = {};
     months.forEach((m) => (revenueByMonth[m] = 0));
     (payments ?? []).forEach((p) => {
       const m = new Date(p.payment_date).toLocaleString('en-US', { month: 'short' });
       if (revenueByMonth[m] !== undefined) revenueByMonth[m] += Number(p.amount);
     });
-
-    const revenueData = months.map((month) => ({ month, revenue: revenueByMonth[month] }));
+    const revenueData    = months.map((month) => ({ month, revenue: revenueByMonth[month] }));
     const monthlyRevenue = revenueByMonth[months[months.length - 1]] ?? 0;
     const monthlyExpenses = (expensesThisMonth ?? []).reduce((s, e) => s + Number(e.amount), 0);
-    const monthlyProfit = monthlyRevenue - monthlyExpenses;
+    const monthlyProfit  = monthlyRevenue - monthlyExpenses;
 
-    // New members per month (last 6)
+    // ── Member growth ──
     const { data: membersByMonth } = await supabase
       .from('members')
       .select('created_at')
@@ -62,7 +110,7 @@ async function getDashboardData() {
     });
     const memberGrowthData = months.map((month) => ({ month, members: memberGrowthMap[month] }));
 
-    // Plan distribution
+    // ── Plan distribution ──
     const { data: membershipsWithPlan } = await supabase
       .from('memberships')
       .select('plan:membership_plans(name)')
@@ -75,61 +123,47 @@ async function getDashboardData() {
     });
     const planData = Object.entries(planMap).map(([name, value]) => ({ name, value }));
 
-    // Gender breakdown per month (last 6)
-    const { data: membersWithGender } = await supabase
-      .from('members')
-      .select('gender, created_at')
-      .eq('status', 'active')
-      .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
-
-    const genderMonthMap: Record<string, { male: number; female: number }> = {};
-    months.forEach((m) => (genderMonthMap[m] = { male: 0, female: 0 }));
-    (membersWithGender ?? []).forEach((mb: any) => {
-      const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
-      if (!genderMonthMap[m]) return;
-      if (mb.gender === 'male') genderMonthMap[m].male++;
-      else if (mb.gender === 'female') genderMonthMap[m].female++;
-    });
-    const genderData = months.map((month) => ({ month, ...genderMonthMap[month] }));
-
     return {
       stats: {
-        totalMembers: totalMembers ?? 0,
-        activeMembers: activeMembers ?? 0,
-        newThisMonth: newThisMonth ?? 0,
+        totalMembers:    totalMembers   ?? 0,
+        activeMembers:   activeMembers  ?? 0,
+        newThisMonth:    newThisMonth   ?? 0,
+        weeklyRevenue,
         monthlyRevenue,
         monthlyExpenses,
         monthlyProfit,
       },
+      lbpRate,
+      weeklyChartData,
       revenueData,
       memberGrowthData,
       planData,
-      genderData,
     };
   } catch (error) {
     console.error('Error fetching dashboard data during build:', error);
+    const emptyWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'].map(day => ({ day, revenue: 0 }));
     return {
       stats: {
-        totalMembers: 0,
-        activeMembers: 0,
-        newThisMonth: 0,
-        monthlyRevenue: 0,
-        monthlyExpenses: 0,
-        monthlyProfit: 0,
+        totalMembers: 0, activeMembers: 0, newThisMonth: 0,
+        weeklyRevenue: 0,
+        monthlyRevenue: 0, monthlyExpenses: 0, monthlyProfit: 0,
       },
-      revenueData: months.map((month) => ({ month, revenue: 0 })),
+      lbpRate: 90000,
+      weeklyChartData:  emptyWeek,
+      revenueData:      months.map((month) => ({ month, revenue: 0 })),
       memberGrowthData: months.map((month) => ({ month, members: 0 })),
       planData: [],
-      genderData: months.map((month) => ({ month, male: 0, female: 0, other: 0 })),
     };
   }
 }
 
 export default async function DashboardPage() {
-  const { stats, revenueData, memberGrowthData, planData, genderData } = await getDashboardData();
+  const { stats, lbpRate, weeklyChartData, revenueData, memberGrowthData, planData } = await getDashboardData();
 
   return (
     <div>
+      <DashboardRefresher />
+
       {/* Header */}
       <div className="page-header">
         <div>
@@ -141,8 +175,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid-2" style={{ marginBottom: '1.25rem' }}>
+      {/* Members + Monthly Revenue row */}
+      <div className="grid-3" style={{ marginBottom: '1.25rem' }}>
         <StatCard
           title="Total Members"
           value={stats.totalMembers}
@@ -159,19 +193,22 @@ export default async function DashboardPage() {
           iconColor="#10b981"
           iconBg="rgba(16,185,129,0.15)"
         />
-      </div>
-
-      <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
         <StatCard
           title="Revenue This Month"
           value={formatCurrency(stats.monthlyRevenue)}
+          subValue={formatLBP(usdToLbp(stats.monthlyRevenue, lbpRate))}
           icon={DollarSign}
           iconColor="#f59e0b"
           iconBg="rgba(245,158,11,0.15)"
         />
+      </div>
+
+      {/* Expenses / Profit */}
+      <div className="grid-2" style={{ marginBottom: '1.5rem' }}>
         <StatCard
           title="Expenses This Month"
           value={formatCurrency(stats.monthlyExpenses)}
+          subValue={formatLBP(usdToLbp(stats.monthlyExpenses, lbpRate))}
           icon={TrendingDown}
           iconColor="#ef4444"
           iconBg="rgba(239,68,68,0.15)"
@@ -179,20 +216,22 @@ export default async function DashboardPage() {
         <StatCard
           title="Profit This Month"
           value={formatCurrency(stats.monthlyProfit)}
+          subValue={formatLBP(usdToLbp(stats.monthlyProfit, lbpRate))}
           icon={stats.monthlyProfit >= 0 ? TrendingUp : TrendingDown}
           iconColor={stats.monthlyProfit >= 0 ? '#10b981' : '#ef4444'}
           iconBg={stats.monthlyProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}
         />
       </div>
 
-      {/* Charts row */}
+      {/* All Charts */}
       <DashboardCharts
+        weeklyChartData={weeklyChartData}
+        weeklyRevenue={stats.weeklyRevenue}
+        lbpRate={lbpRate}
         revenueData={revenueData}
         memberGrowthData={memberGrowthData}
         planData={planData}
-        genderData={genderData}
       />
-
     </div>
   );
 }

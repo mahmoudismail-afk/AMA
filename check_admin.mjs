@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 async function checkLogin() {
   console.log('Testing login...');
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: 'admin@gym.com',
+    email: 'admin@salonraed.local',
     password: '1234567',
   });
 

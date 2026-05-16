@@ -4,7 +4,6 @@ export type MembershipStatus = 'active' | 'expired' | 'paused' | 'cancelled';
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'other';
 export type ClassStatus = 'scheduled' | 'cancelled' | 'completed';
 export type BookingStatus = 'confirmed' | 'waitlisted' | 'cancelled';
-export type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
 export interface Profile {
   id: string;
@@ -20,7 +19,6 @@ export interface Member {
   id: string;
   profile_id: string;
   date_of_birth?: string;
-  gender?: Gender;
   address?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;

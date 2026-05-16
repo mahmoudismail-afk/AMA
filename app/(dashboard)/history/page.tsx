@@ -30,7 +30,7 @@ async function getHistoryData(year: number) {
       .lte('payment_date', yearEnd),
 
     supabase.from('members')
-      .select('created_at, gender, status')
+      .select('created_at, status')
       .gte('created_at', `${yearStart}T00:00:00`)
       .lte('created_at', `${yearEnd}T23:59:59`),
 
@@ -75,16 +75,6 @@ async function getHistoryData(year: number) {
   const memberGrowthData = ALL_MONTHS.map(month => ({ month, members: membersByMonth[month] }));
   const totalNewMembers = membersJoined?.length ?? 0;
 
-  // --- Gender breakdown per month ---
-  const genderMap: Record<string, { male: number; female: number }> = {};
-  ALL_MONTHS.forEach(m => (genderMap[m] = { male: 0, female: 0 }));
-  (membersJoined ?? []).forEach((mb: any) => {
-    const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
-    if (!genderMap[m]) return;
-    if (mb.gender === 'male') genderMap[m].male++;
-    else if (mb.gender === 'female') genderMap[m].female++;
-  });
-  const genderData = ALL_MONTHS.map(month => ({ month, ...genderMap[month] }));
 
   // --- Plan distribution ---
   const planMap: Record<string, number> = {};
@@ -148,7 +138,6 @@ async function getHistoryData(year: number) {
   return {
     revenueData,
     memberGrowthData,
-    genderData,
     planDistData,
     renewalsData,
     monthlyExpensesData,
@@ -201,7 +190,7 @@ export default async function HistoryPage({
     getAvailableYears(),
   ]);
 
-  const { stats, revenueData, memberGrowthData, genderData, planDistData, renewalsData, monthlyExpensesData, profitData, inventoryData } = historyData;
+  const { stats, revenueData, memberGrowthData, planDistData, renewalsData, monthlyExpensesData, profitData, inventoryData } = historyData;
 
   return (
     <div>
@@ -254,7 +243,6 @@ export default async function HistoryPage({
         year={year}
         revenueData={revenueData}
         memberGrowthData={memberGrowthData}
-        genderData={genderData}
         planDistData={planDistData}
         renewalsData={renewalsData}
         monthlyExpensesData={monthlyExpensesData}

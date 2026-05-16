@@ -4,15 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Phone, Calendar, AlertCircle, Save } from 'lucide-react';
 import { createMember, updateMember } from '@/lib/actions/members';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 
 interface MemberFormProps {
   plans: { id: string; name: string; price: number; duration_days: number }[];
   member?: any;
   profile?: any;
   isEdit?: boolean;
+  lbpRate?: number;
 }
 
-export default function MemberForm({ plans, member, profile, isEdit = false }: MemberFormProps) {
+export default function MemberForm({ plans, member, profile, isEdit = false, lbpRate = 90000 }: MemberFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +23,6 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
     email: profile?.email ?? '',
     phone: profile?.phone ?? '',
     date_of_birth: member?.date_of_birth ?? '',
-    gender: member?.gender ?? '',
     joined_at: member?.created_at ? member.created_at.split('T')[0] : '',
     notes: member?.notes ?? '',
     status: member?.status ?? 'active',
@@ -43,7 +44,6 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
         full_name: form.full_name,
         phone: form.phone,
         date_of_birth: form.date_of_birth,
-        gender: form.gender,
         notes: form.notes,
         status: form.status,
       });
@@ -57,7 +57,6 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
         phone: form.phone,
         email: form.email || undefined,
         date_of_birth: form.date_of_birth,
-        gender: form.gender,
         joined_at: form.joined_at || undefined,
         notes: form.notes,
         status: form.status,
@@ -99,11 +98,11 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
             </div>
 
             <div className="form-group">
-              <label className="form-label">Phone Number <span className="required">*</span></label>
+              <label className="form-label">Phone Number <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
               <div className="input-with-icon">
                 <Phone size={15} className="input-icon" />
                 <input name="phone" type="tel" className="form-input"
-                  placeholder="+1 555 000 0000" value={form.phone} onChange={handleChange} required />
+                  placeholder="+1 555 000 0000" value={form.phone} onChange={handleChange} />
               </div>
             </div>
 
@@ -123,15 +122,6 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
                 value={form.date_of_birth} onChange={handleChange} />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Gender</label>
-              <select name="gender" className="form-input" value={form.gender} onChange={handleChange}>
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
 
             <div className="form-group">
               <label className="form-label">Status</label>
@@ -185,11 +175,12 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
               {form.plan_id && (
                 <div className="form-group">
                   <label className="form-label">Payment Amount</label>
-                  <div className="input-with-icon">
-                    <span className="input-icon" style={{ fontSize: '0.875rem', fontWeight: 600 }}>$</span>
-                    <input name="custom_price" type="number" step="0.01" className="form-input"
-                      value={form.custom_price} onChange={handleChange} />
-                  </div>
+                  <CurrencyInput
+                    valueUsd={form.custom_price}
+                    onChange={(val) => setForm(prev => ({ ...prev, custom_price: val }))}
+                    lbpRate={lbpRate}
+                    id="custom-price"
+                  />
                   <span className="form-hint">Overrides plan price for this payment.</span>
                 </div>
               )}

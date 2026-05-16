@@ -28,6 +28,8 @@ export default async function SettingsPage() {
   }
 
   const staffPermissions = await getStaffPermissions();
+  const { data: rateSetting } = await supabase.from('system_settings').select('value').eq('key', 'lbp_rate').single();
+  const initialLbpRate = rateSetting ? Number(rateSetting.value) || 90000 : 90000;
 
   return (
     <SettingsClient
@@ -35,6 +37,7 @@ export default async function SettingsPage() {
       userId={user.id}
       allUsers={allUsers}
       staffPermissions={staffPermissions}
+      initialLbpRate={initialLbpRate}
     />
   );
 }

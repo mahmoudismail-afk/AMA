@@ -1,5 +1,5 @@
 -- ================================================================
--- AMA Gym — Supabase Database Schema (Consolidated)
+-- Salon Raed — Supabase Database Schema (Consolidated)
 -- Run this in your Supabase SQL Editor (supabase.com → SQL Editor)
 -- ================================================================
 
@@ -265,7 +265,8 @@ INSERT INTO public.class_types (name, description, color) VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.system_settings (key, value) VALUES
-  ('gym_name', '"GYM demo"'),
+  ('gym_name', '"Salon Raed"'),
   ('currency', '"USD"'),
-  ('tax_rate', '0')
+  ('tax_rate', '0'),
+  ('lbp_rate', '90000')
 ON CONFLICT DO NOTHING;

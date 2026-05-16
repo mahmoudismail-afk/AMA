@@ -17,11 +17,13 @@ export default function SettingsClient({
   userId,
   allUsers,
   staffPermissions = ['dashboard', 'members', 'payments', 'plans', 'expenses', 'history'],
+  initialLbpRate = 90000,
 }: {
   profile: any;
   userId: string;
   allUsers: any[];
   staffPermissions?: string[];
+  initialLbpRate?: number;
 }) {
   const router = useRouter();
   const isAdmin = profile?.role === 'admin';
@@ -148,6 +150,26 @@ export default function SettingsClient({
     setStaffPerms(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
   }
 
+  // ── LBP Exchange Rate ──
+  const [lbpRate, setLbpRate] = useState(initialLbpRate.toString());
+  const [lbpSaving, setLbpSaving] = useState(false);
+  const [lbpMsg, setLbpMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  async function handleLbpSave() {
+    const rate = parseInt(lbpRate, 10);
+    if (!rate || rate < 1000) { setLbpMsg({ type: 'error', text: 'Please enter a valid rate (min 1,000).' }); return; }
+    setLbpSaving(true);
+    setLbpMsg(null);
+    const supabase = createClient();
+    const { error } = await supabase.from('system_settings')
+      .upsert({ key: 'lbp_rate', value: rate }, { onConflict: 'key' });
+    setLbpMsg(error
+      ? { type: 'error', text: error.message }
+      : { type: 'success', text: `Rate saved: $1 = ل.ل ${Number(rate).toLocaleString()}` }
+    );
+    setLbpSaving(false);
+  }
+
   return (
     <>
       <div className="page-header">
@@ -255,6 +277,51 @@ export default function SettingsClient({
                 {pwSaving ? 'Updating...' : 'Update Password'}
               </button>
             </form>
+          </div>
+
+          {/* LBP Exchange Rate */}
+          <div className="card">
+            <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '1rem' }}>ل.ل</span> LBP Exchange Rate
+            </h4>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Set the Lebanese Pound rate used for currency conversion across the app.
+            </p>
+
+            {lbpMsg && (
+              <div className={`alert ${lbpMsg.type === 'success' ? 'alert-success' : 'alert-danger'}`} style={{ marginBottom: '1rem' }}>
+                {lbpMsg.type === 'success' ? <CheckCircle size={15} /> : <AlertCircle size={15} />}
+                {lbpMsg.text}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+              <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                <label className="form-label">$1 USD =</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    min="1000"
+                    step="500"
+                    className="form-input"
+                    value={lbpRate}
+                    onChange={e => setLbpRate(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>ل.ل</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={`btn btn-primary ${lbpSaving ? 'btn-loading' : ''}`}
+                onClick={handleLbpSave}
+                disabled={lbpSaving}
+                style={{ flexShrink: 0 }}
+              >
+                {lbpSaving ? <span className="spinner" /> : null}
+                {lbpSaving ? 'Saving...' : 'Save Rate'}
+              </button>
+            </div>
           </div>
         </div>
 

@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, DollarSign, AlertCircle, Trash2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatLBP, usdToLbp, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
@@ -18,10 +19,12 @@ export default function PaymentsClient({
   payments: initial,
   deletedPayments: initialDeleted,
   members,
+  lbpRate = 90000,
 }: {
   payments: any[];
   deletedPayments: any[];
   members: any[];
+  lbpRate?: number;
 }) {
   const router = useRouter();
   const [payments, setPayments] = useState(initial);
@@ -33,7 +36,7 @@ export default function PaymentsClient({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    member_id: '', amount: '', payment_method: 'cash',
+    member_id: '', payer_name: '', amount: '', payment_method: 'cash',
     payment_date: new Date().toISOString().split('T')[0], notes: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,22 +57,41 @@ export default function PaymentsClient({
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
+  function resetModal() {
+    setForm({ member_id: '', payer_name: '', amount: '', payment_method: 'cash', payment_date: new Date().toISOString().split('T')[0], notes: '' });
+    setSearchTerm('');
+    setError('');
+  }
+
   async function handleSave() {
-    if (!form.member_id || !form.amount) { setError('Member and amount are required.'); return; }
+    if (!form.amount) { setError('Amount is required.'); return; }
     setError(''); setSaving(true);
     const supabase = createClient();
-    const { data, error: err } = await supabase.from('payments').insert({
-      member_id: form.member_id, amount: Number(form.amount),
-      payment_method: form.payment_method, payment_date: form.payment_date,
-      notes: form.notes || null,
-    }).select('*, member:members(profile:profiles(full_name))').single();
+
+    // Build notes: prepend payer name if no member selected
+    let notesValue = form.notes || null;
+    if (!form.member_id && form.payer_name.trim()) {
+      notesValue = form.notes
+        ? `[Payer: ${form.payer_name.trim()}] ${form.notes}`
+        : `[Payer: ${form.payer_name.trim()}]`;
+    }
+
+    const insertPayload: any = {
+      amount: Number(form.amount),
+      payment_method: form.payment_method,
+      payment_date: form.payment_date,
+      notes: notesValue,
+    };
+    if (form.member_id) insertPayload.member_id = form.member_id;
+
+    const { data, error: err } = await supabase.from('payments').insert(insertPayload)
+      .select('*, member:members(profile:profiles(full_name))').single();
 
     if (err) { setError(err.message); setSaving(false); return; }
     if (data) setPayments((prev) => [data, ...prev]);
     setModalOpen(false);
     setSaving(false);
-    setForm({ member_id: '', amount: '', payment_method: 'cash', payment_date: new Date().toISOString().split('T')[0], notes: '' });
-    setSearchTerm('');
+    resetModal();
     router.refresh();
   }
 
@@ -108,14 +130,29 @@ export default function PaymentsClient({
     setRestoringId(null);
   }
 
+  function getPayerName(p: any) {
+    if (p.member?.profile?.full_name) return p.member.profile.full_name;
+    if (p.notes) {
+      const match = p.notes.match(/^\[Payer: (.+?)\]/);
+      if (match) return match[1];
+    }
+    return '—';
+  }
+
   function PaymentRow({ p, showDelete }: { p: any; showDelete: boolean }) {
+
+    const displayNotes = p.notes ? p.notes.replace(/^\[Payer: .+?\]\s*/, '') : '—';
     return (
       <tr key={p.id}>
-        <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{p.member?.profile?.full_name ?? '—'}</td>
-        <td style={{ color: 'var(--success)', fontWeight: 600 }}>{formatCurrency(p.amount)}</td>
+        <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{getPayerName(p)}</td>
+        <td style={{ color: 'var(--success)', fontWeight: 600 }}>
+          {formatCurrency(p.amount)}
+          <br />
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>{formatLBP(usdToLbp(p.amount, lbpRate))}</span>
+        </td>
         <td><span className="badge badge-neutral">{methodLabel(p.payment_method)}</span></td>
         <td>{formatDate(p.payment_date)}</td>
-        <td style={{ color: 'var(--text-muted)' }}>{p.notes || '—'}</td>
+        <td style={{ color: 'var(--text-muted)' }}>{displayNotes || '—'}</td>
         <td>
           {showDelete ? (
             <button
@@ -150,7 +187,7 @@ export default function PaymentsClient({
       <div className="page-header">
         <div>
           <h1 className="page-title">Payments</h1>
-          <p className="page-subtitle">Total collected: <strong style={{ color: 'var(--success)' }}>{formatCurrency(totalRevenue)}</strong></p>
+          <p className="page-subtitle">Total collected: <strong style={{ color: 'var(--success)' }}>{formatCurrency(totalRevenue)}</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>/ {formatLBP(usdToLbp(totalRevenue, lbpRate))}</span></p>
         </div>
         <button className="btn btn-primary" onClick={() => setModalOpen(true)} id="add-payment-btn">
           <Plus size={16} /> Record Payment
@@ -165,6 +202,7 @@ export default function PaymentsClient({
             <div key={method} className="stat-card">
               <p className="stat-label">{methodLabel(method)}</p>
               <p className="stat-value" style={{ fontSize: '1.5rem' }}>{formatCurrency(total)}</p>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{formatLBP(usdToLbp(total, lbpRate))}</p>
             </div>
           );
         })}
@@ -243,58 +281,64 @@ export default function PaymentsClient({
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {error && <div className="alert alert-danger"><AlertCircle size={15} />{error}</div>}
+
+          {/* Name field: free-text with optional member dropdown */}
           <div className="form-group" style={{ position: 'relative' }}>
-            <label className="form-label">Member <span className="required">*</span></label>
+            <label className="form-label">Name <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional — type any name or pick a member)</span></label>
             <input
               type="text"
               className="form-input"
-              placeholder="Search member name..."
+              placeholder="Search member or type any name..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setShowDropdown(true);
-                if (form.member_id) setForm((prev) => ({ ...prev, member_id: '' }));
+                // If user is typing freely (not picking), clear member_id and store as payer_name
+                setForm((prev) => ({ ...prev, member_id: '', payer_name: e.target.value }));
               }}
               onFocus={() => setShowDropdown(true)}
               onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             />
-            {showDropdown && (
+            {showDropdown && filteredMembers.length > 0 && (
               <div style={{
                 position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
                 background: 'var(--bg-elevated)', border: '1px solid var(--border)',
                 borderRadius: '0.5rem', marginTop: '0.25rem', maxHeight: 200, overflowY: 'auto',
                 boxShadow: 'var(--shadow-lg)'
               }}>
-                {filteredMembers.length === 0 ? (
-                  <div style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>No members found</div>
-                ) : (
-                  filteredMembers.map((m) => (
-                    <div
-                      key={m.id}
-                      onClick={() => {
-                        setForm((prev) => ({ ...prev, member_id: m.id }));
-                        setSearchTerm(m.profile?.full_name ?? '');
-                        setShowDropdown(false);
-                      }}
-                      style={{
-                        padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)',
-                        color: form.member_id === m.id ? 'var(--primary)' : 'var(--text-primary)'
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      {m.profile?.full_name ?? 'Unknown'}
-                    </div>
-                  ))
-                )}
+                {filteredMembers.map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => {
+                      setForm((prev) => ({ ...prev, member_id: m.id, payer_name: '' }));
+                      setSearchTerm(m.profile?.full_name ?? '');
+                      setShowDropdown(false);
+                    }}
+                    style={{
+                      padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                      color: form.member_id === m.id ? 'var(--primary)' : 'var(--text-primary)'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    {m.profile?.full_name ?? 'Unknown'}
+                  </div>
+                ))}
               </div>
+            )}
+            {form.member_id && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '0.25rem' }}>✓ Linked to member record</p>
             )}
           </div>
           <div className="grid-2" style={{ gap: '0.875rem' }}>
             <div className="form-group">
-              <label className="form-label">Amount (USD) <span className="required">*</span></label>
-              <input name="amount" type="number" min="0" step="0.01" className="form-input"
-                placeholder="0.00" value={form.amount} onChange={handleChange} />
+              <label className="form-label">Amount <span className="required">*</span></label>
+              <CurrencyInput
+                valueUsd={form.amount}
+                onChange={(val) => setForm(prev => ({ ...prev, amount: val }))}
+                lbpRate={lbpRate}
+                id="payment-amount"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Payment Method</label>
