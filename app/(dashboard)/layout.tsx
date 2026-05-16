@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single();
 
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'Admin';
-  const displayEmail = profile?.email?.includes('@amagym.local') ? '' : (profile?.email ?? '');
+  const displayEmail = (profile?.email?.includes('@amagym.local') || profile?.email?.includes('@salonraed.local')) ? '' : (profile?.email ?? '');
   const role: string = profile?.role ?? 'staff';
   const staffPermissions = await getStaffPermissions();
 

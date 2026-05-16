@@ -100,7 +100,7 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
             <div className="divider" style={{ margin: '1rem 0' }} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', textAlign: 'left' }}>
-              {member.profile?.email && !member.profile.email.includes('@amagym.local') && (
+              {member.profile?.email && !member.profile.email.includes('@amagym.local') && !member.profile.email.includes('@salonraed.local') && (
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   <Mail size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.profile.email}</span>

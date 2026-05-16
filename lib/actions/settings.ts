@@ -17,7 +17,7 @@ export async function createStaffAccount(data: {
   role: 'staff' | 'admin';
 }) {
   const supabaseAdmin = getAdminClient();
-  const email = `${data.username.trim()}@amagym.local`;
+  const email = `${data.username.trim()}@salonraed.local`;
 
   const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
