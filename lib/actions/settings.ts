@@ -1,12 +1,8 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 
 function getAdminClient() {
-  // Force load env vars in case the dev server wasn't restarted
-  dotenv.config({ path: '.env.local' });
-  
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder';
   
