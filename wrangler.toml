@@ -11,5 +11,5 @@ directory = ".open-next/assets"
 binding = "ASSETS"
 
 [vars]
-NEXT_PUBLIC_SUPABASE_URL = "https://sjqgalckdhimavjcrxck.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_NWflPIc6U47XHBKzGryYkw_FVCbsPLA"
+NEXT_PUBLIC_SUPABASE_URL = "https://boyivhuyqblfmczdyzgt.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_FPFJsPDUS4USw6FXLpcU2w_S5UYVWd2"
