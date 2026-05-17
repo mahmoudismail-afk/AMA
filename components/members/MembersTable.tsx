@@ -167,6 +167,40 @@ export default function MembersTable({ members }: MembersTableProps) {
 
   return (
     <>
+      {/* Mobile sort bar — visible only on small screens */}
+      <div className="mobile-sort-bar">
+        <span className="mobile-sort-label">Sort:</span>
+        <button
+          id="mobile-sort-name-btn"
+          className={`mobile-sort-chip ${sortName !== 'none' ? 'mobile-sort-chip-active' : ''}`}
+          onClick={cycleSortName}
+        >
+          Name
+          {sortName === 'none' && <span className="mobile-sort-chip-icon">↕</span>}
+          {sortName === 'asc'  && <span className="mobile-sort-chip-icon">A→Z</span>}
+          {sortName === 'desc' && <span className="mobile-sort-chip-icon">Z→A</span>}
+        </button>
+        <button
+          id="mobile-sort-days-btn"
+          className={`mobile-sort-chip ${sortDays !== 'none' ? 'mobile-sort-chip-active' : ''}`}
+          onClick={cycleSortDays}
+        >
+          Expiry
+          {sortDays === 'none' && <span className="mobile-sort-chip-icon">↕</span>}
+          {sortDays === 'asc'  && <span className="mobile-sort-chip-icon">↑ Soonest</span>}
+          {sortDays === 'desc' && <span className="mobile-sort-chip-icon">↓ Latest</span>}
+        </button>
+        {(sortName !== 'none' || sortDays !== 'none') && (
+          <button
+            id="mobile-sort-clear-btn"
+            className="mobile-sort-clear"
+            onClick={() => { setSortName('none'); setSortDays('none'); }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="table-wrapper">
         <table className="table" id="members-table">
           <thead>
