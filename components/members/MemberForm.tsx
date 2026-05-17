@@ -11,10 +11,9 @@ interface MemberFormProps {
   member?: any;
   profile?: any;
   isEdit?: boolean;
-  lbpRate?: number;
 }
 
-export default function MemberForm({ plans, member, profile, isEdit = false, lbpRate = 90000 }: MemberFormProps) {
+export default function MemberForm({ plans, member, profile, isEdit = false }: MemberFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +22,7 @@ export default function MemberForm({ plans, member, profile, isEdit = false, lbp
     email: profile?.email ?? '',
     phone: profile?.phone ?? '',
     date_of_birth: member?.date_of_birth ?? '',
+    gender: member?.gender ?? '',
     joined_at: member?.created_at ? member.created_at.split('T')[0] : '',
     notes: member?.notes ?? '',
     status: member?.status ?? 'active',
@@ -44,6 +44,7 @@ export default function MemberForm({ plans, member, profile, isEdit = false, lbp
         full_name: form.full_name,
         phone: form.phone,
         date_of_birth: form.date_of_birth,
+        gender: form.gender,
         notes: form.notes,
         status: form.status,
       });
@@ -57,6 +58,7 @@ export default function MemberForm({ plans, member, profile, isEdit = false, lbp
         phone: form.phone,
         email: form.email || undefined,
         date_of_birth: form.date_of_birth,
+        gender: form.gender,
         joined_at: form.joined_at || undefined,
         notes: form.notes,
         status: form.status,
@@ -122,6 +124,15 @@ export default function MemberForm({ plans, member, profile, isEdit = false, lbp
                 value={form.date_of_birth} onChange={handleChange} />
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Gender</label>
+              <select name="gender" className="form-input" value={form.gender} onChange={handleChange}>
+                <option value="">Select gender</option>
+                <option value="male">♂ Male</option>
+                <option value="female">♀ Female</option>
+              </select>
+            </div>
+
 
             <div className="form-group">
               <label className="form-label">Status</label>
@@ -178,7 +189,6 @@ export default function MemberForm({ plans, member, profile, isEdit = false, lbp
                   <CurrencyInput
                     valueUsd={form.custom_price}
                     onChange={(val) => setForm(prev => ({ ...prev, custom_price: val }))}
-                    lbpRate={lbpRate}
                     id="custom-price"
                   />
                   <span className="form-hint">Overrides plan price for this payment.</span>

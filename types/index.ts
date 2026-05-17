@@ -19,6 +19,7 @@ export interface Member {
   id: string;
   profile_id: string;
   date_of_birth?: string;
+  gender?: 'male' | 'female' | null;
   address?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;

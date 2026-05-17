@@ -4,6 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
+import { GenderBreakdownChart } from '@/components/charts/Charts';
 
 const tooltipStyle = {
   backgroundColor: 'var(--bg-elevated)',
@@ -24,11 +25,12 @@ interface HistoryClientProps {
   monthlyExpensesData: { month: string; expense: number; salary: number; total: number }[];
   profitData: { month: string; revenue: number; expenses: number; profit: number }[];
   inventoryData: { month: string; sales: number; restocks: number }[];
+  genderData: { month: string; male: number; female: number }[];
 }
 
 export default function HistoryClient({
   year, revenueData, memberGrowthData, planDistData, renewalsData,
-  monthlyExpensesData, profitData, inventoryData,
+  monthlyExpensesData, profitData, inventoryData, genderData,
 }: HistoryClientProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -223,6 +225,17 @@ export default function HistoryClient({
             <Bar dataKey="restocks" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={36} />
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Gender Breakdown */}
+      <div className="chart-card">
+        <div className="chart-card-header">
+          <div>
+            <p className="chart-card-title">Gender Breakdown — {year}</p>
+            <p className="chart-card-subtitle">New members gender per month</p>
+          </div>
+        </div>
+        <GenderBreakdownChart data={genderData} />
       </div>
     </div>
   );

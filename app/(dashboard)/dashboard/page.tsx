@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Users, DollarSign, Activity, TrendingUp, TrendingDown } from 'lucide-react';
-import { formatCurrency, formatLBP, usdToLbp, getLastNMonths } from '@/lib/utils';
+import { formatCurrency, getLastNMonths } from '@/lib/utils';
 import StatCard from '@/components/dashboard/StatCard';
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import DashboardRefresher from '@/components/dashboard/DashboardRefresher';
@@ -14,14 +14,6 @@ async function getDashboardData() {
   try {
     const supabase = await createClient();
     const now = new Date();
-
-    // Fetch LBP exchange rate from settings (default 90000)
-    const { data: rateSetting } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'lbp_rate')
-      .single();
-    const lbpRate: number = rateSetting ? Number(rateSetting.value) || 90000 : 90000;
 
     // Date boundaries
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -96,19 +88,28 @@ async function getDashboardData() {
     const monthlyExpenses = (expensesThisMonth ?? []).reduce((s, e) => s + Number(e.amount), 0);
     const monthlyProfit  = monthlyRevenue - monthlyExpenses;
 
-    // ── Member growth ──
+    // ── Member growth + gender breakdown ──
     const { data: membersByMonth } = await supabase
       .from('members')
-      .select('created_at')
+      .select('created_at, gender')
       .gte('created_at', new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString());
 
     const memberGrowthMap: Record<string, number> = {};
-    months.forEach((m) => (memberGrowthMap[m] = 0));
-    (membersByMonth ?? []).forEach((mb) => {
+    const genderMap: Record<string, { male: number; female: number }> = {};
+    months.forEach((m) => {
+      memberGrowthMap[m] = 0;
+      genderMap[m] = { male: 0, female: 0 };
+    });
+    (membersByMonth ?? []).forEach((mb: any) => {
       const m = new Date(mb.created_at).toLocaleString('en-US', { month: 'short' });
       if (memberGrowthMap[m] !== undefined) memberGrowthMap[m]++;
+      if (genderMap[m] !== undefined) {
+        if (mb.gender === 'male') genderMap[m].male++;
+        else if (mb.gender === 'female') genderMap[m].female++;
+      }
     });
     const memberGrowthData = months.map((month) => ({ month, members: memberGrowthMap[month] }));
+    const genderData = months.map((month) => ({ month, ...genderMap[month] }));
 
     // ── Plan distribution ──
     const { data: membershipsWithPlan } = await supabase
@@ -133,11 +134,11 @@ async function getDashboardData() {
         monthlyExpenses,
         monthlyProfit,
       },
-      lbpRate,
       weeklyChartData,
       revenueData,
       memberGrowthData,
       planData,
+      genderData,
     };
   } catch (error) {
     console.error('Error fetching dashboard data during build:', error);
@@ -148,17 +149,17 @@ async function getDashboardData() {
         weeklyRevenue: 0,
         monthlyRevenue: 0, monthlyExpenses: 0, monthlyProfit: 0,
       },
-      lbpRate: 90000,
       weeklyChartData:  emptyWeek,
       revenueData:      months.map((month) => ({ month, revenue: 0 })),
       memberGrowthData: months.map((month) => ({ month, members: 0 })),
       planData: [],
+      genderData:       months.map((month) => ({ month, male: 0, female: 0 })),
     };
   }
 }
 
 export default async function DashboardPage() {
-  const { stats, lbpRate, weeklyChartData, revenueData, memberGrowthData, planData } = await getDashboardData();
+  const { stats, revenueData, memberGrowthData, planData, genderData } = await getDashboardData();
 
   return (
     <div>
@@ -196,7 +197,6 @@ export default async function DashboardPage() {
         <StatCard
           title="Revenue This Month"
           value={formatCurrency(stats.monthlyRevenue)}
-          subValue={formatLBP(usdToLbp(stats.monthlyRevenue, lbpRate))}
           icon={DollarSign}
           iconColor="#f59e0b"
           iconBg="rgba(245,158,11,0.15)"
@@ -208,7 +208,6 @@ export default async function DashboardPage() {
         <StatCard
           title="Expenses This Month"
           value={formatCurrency(stats.monthlyExpenses)}
-          subValue={formatLBP(usdToLbp(stats.monthlyExpenses, lbpRate))}
           icon={TrendingDown}
           iconColor="#ef4444"
           iconBg="rgba(239,68,68,0.15)"
@@ -216,7 +215,6 @@ export default async function DashboardPage() {
         <StatCard
           title="Profit This Month"
           value={formatCurrency(stats.monthlyProfit)}
-          subValue={formatLBP(usdToLbp(stats.monthlyProfit, lbpRate))}
           icon={stats.monthlyProfit >= 0 ? TrendingUp : TrendingDown}
           iconColor={stats.monthlyProfit >= 0 ? '#10b981' : '#ef4444'}
           iconBg={stats.monthlyProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}
@@ -225,12 +223,10 @@ export default async function DashboardPage() {
 
       {/* All Charts */}
       <DashboardCharts
-        weeklyChartData={weeklyChartData}
-        weeklyRevenue={stats.weeklyRevenue}
-        lbpRate={lbpRate}
         revenueData={revenueData}
         memberGrowthData={memberGrowthData}
         planData={planData}
+        genderData={genderData}
       />
     </div>
   );

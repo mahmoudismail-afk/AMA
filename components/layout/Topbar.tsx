@@ -1,7 +1,9 @@
 'use client';
 
-import { Bell, Search, Menu } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, Search, Menu, Settings } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 interface TopbarProps {
   userName?: string;
@@ -12,9 +14,11 @@ interface TopbarProps {
 }
 
 export default function Topbar({ userName, userEmail, avatarUrl, role, onMenuClick }: TopbarProps) {
+  const pathname = usePathname();
+
   return (
     <header className="topbar">
-      {/* Mobile menu button */}
+      {/* Mobile menu button — opens full sidebar for extra pages */}
       <button
         className="btn btn-ghost btn-icon topbar-menu-btn"
         onClick={onMenuClick}
@@ -36,6 +40,16 @@ export default function Topbar({ userName, userEmail, avatarUrl, role, onMenuCli
       </div>
 
       <div className="topbar-actions">
+        {/* Settings link — visible on mobile next to avatar */}
+        <Link
+          href="/settings"
+          className={`btn btn-ghost btn-icon topbar-settings-btn ${pathname.startsWith('/settings') ? 'topbar-settings-active' : ''}`}
+          aria-label="Settings"
+          id="topbar-settings-btn"
+        >
+          <Settings size={20} />
+        </Link>
+
         {/* Notifications */}
         <button
           className="btn btn-ghost btn-icon topbar-notif-btn"

@@ -133,42 +133,34 @@ export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
   );
 }
 
-/* ── Weekly Revenue — Area Chart (last 7 days) ── */
-interface WeeklyRevenueChartProps {
-  data: { day: string; revenue: number }[];
+/* ── Gender Breakdown — Stacked Bar Chart (per month) ── */
+interface GenderBreakdownChartProps {
+  data: { month: string; male: number; female: number }[];
 }
-export function WeeklyRevenueChart({ data }: WeeklyRevenueChartProps) {
+export function GenderBreakdownChart({ data }: GenderBreakdownChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id="weeklyGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.35} />
-            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-        <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis
-          tick={{ fill: '#64748b', fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-          tickFormatter={(v) => `$${v >= 1000 ? `${v / 1000}k` : v}`}
-        />
+    <ResponsiveContainer width="100%" height={230}>
+      <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip
           contentStyle={tooltipStyle}
-          formatter={(val: number) => [`$${val.toLocaleString()}`, 'Revenue']}
+          formatter={(val: number, name: string) => [val, name === 'male' ? '♂ Male' : '♀ Female']}
+          cursor={{ fill: 'rgba(255,255,255,0.04)' }}
         />
-        <Area
-          type="monotone"
-          dataKey="revenue"
-          stroke="#8b5cf6"
-          strokeWidth={2.5}
-          fill="url(#weeklyGrad)"
-          dot={{ fill: '#8b5cf6', r: 4, strokeWidth: 0 }}
-          activeDot={{ r: 6, fill: '#8b5cf6' }}
+        <Legend
+          formatter={(v) => (
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
+              {v === 'male' ? '♂ Male' : '♀ Female'}
+            </span>
+          )}
         />
-      </AreaChart>
+        <Bar dataKey="male"   stackId="g" fill="#06b6d4" maxBarSize={40} />
+        <Bar dataKey="female" stackId="g" fill="#f472b6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+      </BarChart>
     </ResponsiveContainer>
   );
 }
+
+

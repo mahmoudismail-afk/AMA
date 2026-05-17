@@ -1,14 +1,21 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#111827',
+};
 
 export const metadata: Metadata = {
   title: {
-    default: 'Salon Raed — Management System',
-    template: '%s | Salon Raed',
+    default: 'AMA GYM — Management System',
+    template: '%s | AMA GYM',
   },
   description:
-    'A premium salon management system to manage clients, bookings, staff, and payments.',
-  keywords: ['salon', 'management', 'beauty', 'haircut', 'bookings'],
+    'A modern gym management system to manage members, classes, trainers, payments, and more.',
+  keywords: ['gym', 'management', 'fitness', 'members', 'classes'],
 };
 
 export default function RootLayout({
@@ -17,9 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

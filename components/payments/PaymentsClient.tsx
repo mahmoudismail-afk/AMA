@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, DollarSign, AlertCircle, Trash2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatLBP, usdToLbp, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import CurrencyInput from '@/components/ui/CurrencyInput';
@@ -19,12 +19,10 @@ export default function PaymentsClient({
   payments: initial,
   deletedPayments: initialDeleted,
   members,
-  lbpRate = 90000,
 }: {
   payments: any[];
   deletedPayments: any[];
   members: any[];
-  lbpRate?: number;
 }) {
   const router = useRouter();
   const [payments, setPayments] = useState(initial);
@@ -147,8 +145,6 @@ export default function PaymentsClient({
         <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{getPayerName(p)}</td>
         <td style={{ color: 'var(--success)', fontWeight: 600 }}>
           {formatCurrency(p.amount)}
-          <br />
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>{formatLBP(usdToLbp(p.amount, lbpRate))}</span>
         </td>
         <td><span className="badge badge-neutral">{methodLabel(p.payment_method)}</span></td>
         <td>{formatDate(p.payment_date)}</td>
@@ -187,7 +183,7 @@ export default function PaymentsClient({
       <div className="page-header">
         <div>
           <h1 className="page-title">Payments</h1>
-          <p className="page-subtitle">Total collected: <strong style={{ color: 'var(--success)' }}>{formatCurrency(totalRevenue)}</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>/ {formatLBP(usdToLbp(totalRevenue, lbpRate))}</span></p>
+          <p className="page-subtitle">Total collected: <strong style={{ color: 'var(--success)' }}>{formatCurrency(totalRevenue)}</strong></p>
         </div>
         <button className="btn btn-primary" onClick={() => setModalOpen(true)} id="add-payment-btn">
           <Plus size={16} /> Record Payment
@@ -202,7 +198,6 @@ export default function PaymentsClient({
             <div key={method} className="stat-card">
               <p className="stat-label">{methodLabel(method)}</p>
               <p className="stat-value" style={{ fontSize: '1.5rem' }}>{formatCurrency(total)}</p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{formatLBP(usdToLbp(total, lbpRate))}</p>
             </div>
           );
         })}
@@ -336,7 +331,6 @@ export default function PaymentsClient({
               <CurrencyInput
                 valueUsd={form.amount}
                 onChange={(val) => setForm(prev => ({ ...prev, amount: val }))}
-                lbpRate={lbpRate}
                 id="payment-amount"
               />
             </div>

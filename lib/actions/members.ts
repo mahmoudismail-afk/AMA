@@ -17,7 +17,7 @@ export async function createMember(formData: {
   phone: string;
   email?: string;
   date_of_birth?: string;
-
+  gender?: string;
   joined_at?: string;
   notes?: string;
   status: string;
@@ -44,7 +44,7 @@ export async function createMember(formData: {
     .insert({
       profile_id: profileId,
       date_of_birth: formData.date_of_birth || null,
-
+      gender: formData.gender || null,
       notes: formData.notes || null,
       status: formData.status,
       ...(formData.joined_at ? { created_at: new Date(formData.joined_at).toISOString() } : {}),
@@ -99,7 +99,7 @@ export async function updateMember(
     full_name: string;
     phone: string;
     date_of_birth?: string;
-
+    gender?: string;
     notes?: string;
     status: string;
   }
@@ -113,7 +113,7 @@ export async function updateMember(
 
   const { error } = await supabase.from('members').update({
     date_of_birth: formData.date_of_birth || null,
-
+    gender: formData.gender || null,
     notes: formData.notes || null,
     status: formData.status,
   }).eq('id', memberId);

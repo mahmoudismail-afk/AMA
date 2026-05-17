@@ -21,7 +21,7 @@ export default async function MembersPage({
     let query = supabase
     .from('members')
     .select(`
-      id, status, created_at,
+      id, status, created_at, gender,
       profile:profiles(full_name, email, phone, avatar_url),
       memberships(start_date, end_date, status, plan:membership_plans(name))
     `)

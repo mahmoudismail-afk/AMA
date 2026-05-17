@@ -6,11 +6,8 @@ export const metadata: Metadata = { title: 'Add Member' };
 
 export default async function NewMemberPage() {
   const supabase = await createClient();
-  const [{ data: plans }, { data: rateSetting }] = await Promise.all([
-    supabase.from('membership_plans').select('id, name, price, duration_days').eq('is_active', true).order('price'),
-    supabase.from('system_settings').select('value').eq('key', 'lbp_rate').single(),
-  ]);
-  const lbpRate = rateSetting ? Number(rateSetting.value) || 90000 : 90000;
+  const { data: plans } = await supabase
+    .from('membership_plans').select('id, name, price, duration_days').eq('is_active', true).order('price');
 
   return (
     <div>
@@ -20,7 +17,7 @@ export default async function NewMemberPage() {
           <p className="page-subtitle">Create a new gym member account</p>
         </div>
       </div>
-      <MemberForm plans={plans ?? []} lbpRate={lbpRate} />
+      <MemberForm plans={plans ?? []} />
     </div>
   );
 }

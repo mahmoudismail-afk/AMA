@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Scissors, Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Dumbbell, Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { registerAdmin } from '@/lib/actions/auth';
 import '../auth.css';
@@ -90,9 +90,9 @@ export default function SignupPage() {
       <div className="auth-card animate-slide">
         <div className="auth-logo">
           <div className="auth-logo-icon">
-            <Scissors size={28} />
+            <Dumbbell size={28} />
           </div>
-          <span className="auth-logo-text">Salon Raed</span>
+          <span className="auth-logo-text">AMA GYM</span>
         </div>
 
         <div className="auth-header">

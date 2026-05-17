@@ -36,7 +36,7 @@ export default function MembersTable({ members }: MembersTableProps) {
     const phone = m.profile?.phone ?? '';
     if (!phone) return;
     const name = m.profile?.full_name ?? 'there';
-    const message = `Hello ${name}, your membership at AMA Gym expires ${dLeft === 0 ? 'today' : dLeft === 1 ? 'tomorrow' : `in ${dLeft} days`}! Don't forget to renew.`;
+    const message = `Hello ${name}, your membership at AMA GYM expires ${dLeft === 0 ? 'today' : dLeft === 1 ? 'tomorrow' : `in ${dLeft} days`}! Don't forget to renew.`;
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -167,40 +167,6 @@ export default function MembersTable({ members }: MembersTableProps) {
 
   return (
     <>
-      {/* Mobile sort bar — visible only on small screens */}
-      <div className="mobile-sort-bar">
-        <span className="mobile-sort-label">Sort:</span>
-        <button
-          id="mobile-sort-name-btn"
-          className={`mobile-sort-chip ${sortName !== 'none' ? 'mobile-sort-chip-active' : ''}`}
-          onClick={cycleSortName}
-        >
-          Name
-          {sortName === 'none' && <span className="mobile-sort-chip-icon">↕</span>}
-          {sortName === 'asc'  && <span className="mobile-sort-chip-icon">A→Z</span>}
-          {sortName === 'desc' && <span className="mobile-sort-chip-icon">Z→A</span>}
-        </button>
-        <button
-          id="mobile-sort-days-btn"
-          className={`mobile-sort-chip ${sortDays !== 'none' ? 'mobile-sort-chip-active' : ''}`}
-          onClick={cycleSortDays}
-        >
-          Expiry
-          {sortDays === 'none' && <span className="mobile-sort-chip-icon">↕</span>}
-          {sortDays === 'asc'  && <span className="mobile-sort-chip-icon">↑ Soonest</span>}
-          {sortDays === 'desc' && <span className="mobile-sort-chip-icon">↓ Latest</span>}
-        </button>
-        {(sortName !== 'none' || sortDays !== 'none') && (
-          <button
-            id="mobile-sort-clear-btn"
-            className="mobile-sort-clear"
-            onClick={() => { setSortName('none'); setSortDays('none'); }}
-          >
-            Clear
-          </button>
-        )}
-      </div>
-
       <div className="table-wrapper">
         <table className="table" id="members-table">
           <thead>
@@ -291,8 +257,16 @@ export default function MembersTable({ members }: MembersTableProps) {
                           ? <img src={avatar} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           : getInitials(name)}
                       </div>
-                      <div>
-                        <p style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: '0.875rem' }}>{name}</p>
+                  <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <p style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: '0.875rem' }}>{name}</p>
+                          {m.gender === 'male' && (
+                            <span title="Male" style={{ fontSize: '0.7rem', fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,0.12)', borderRadius: '999px', padding: '0.1rem 0.4rem', lineHeight: 1.4 }}>♂</span>
+                          )}
+                          {m.gender === 'female' && (
+                            <span title="Female" style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f472b6', background: 'rgba(244,114,182,0.12)', borderRadius: '999px', padding: '0.1rem 0.4rem', lineHeight: 1.4 }}>♀</span>
+                          )}
+                        </div>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{email}</p>
                       </div>
                     </div>

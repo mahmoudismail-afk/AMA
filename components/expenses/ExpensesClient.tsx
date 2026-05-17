@@ -7,7 +7,7 @@ import {
   Wallet, TrendingDown, Filter, CheckCircle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatLBP, usdToLbp, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import CurrencyInput from '@/components/ui/CurrencyInput';
@@ -53,7 +53,7 @@ const EMPTY_FORM = {
   is_recurring: false,
 };
 
-export default function ExpensesClient({ initialExpenses, lbpRate = 90000 }: { initialExpenses: Expense[]; lbpRate?: number }) {
+export default function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[] }) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [filterType, setFilterType] = useState('');
@@ -208,18 +208,17 @@ export default function ExpensesClient({ initialExpenses, lbpRate = 90000 }: { i
       {/* Summary Cards */}
       <div className="grid-stats" style={{ marginBottom: '1.5rem' }}>
         {[
-          { label: 'Total Expenses', value: formatCurrency(totalExpenses), sub: formatLBP(usdToLbp(totalExpenses, lbpRate)), icon: Receipt, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
-          { label: 'Total Salaries', value: formatCurrency(totalSalaries), sub: formatLBP(usdToLbp(totalSalaries, lbpRate)), icon: Wallet, color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-          { label: 'Grand Total', value: formatCurrency(grandTotal), sub: formatLBP(usdToLbp(grandTotal, lbpRate)), icon: TrendingDown, color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
-        ].map(({ label, value, sub, icon: Icon, color, bg }) => (
+          { label: 'Total Expenses', value: formatCurrency(totalExpenses), icon: Receipt, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+          { label: 'Total Salaries', value: formatCurrency(totalSalaries), icon: Wallet, color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+          { label: 'Grand Total', value: formatCurrency(grandTotal), icon: TrendingDown, color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={20} />
             </div>
-            <div>
+              <div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{label}</p>
               <p style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{sub}</p>
             </div>
           </div>
         ))}
@@ -306,8 +305,6 @@ export default function ExpensesClient({ initialExpenses, lbpRate = 90000 }: { i
                     </td>
                     <td style={{ color: '#ef4444', fontWeight: 600 }}>
                       {formatCurrency(exp.amount)}
-                      <br />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>{formatLBP(usdToLbp(exp.amount, lbpRate))}</span>
                     </td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>{exp.notes || '—'}</td>
                     <td>
@@ -379,7 +376,6 @@ export default function ExpensesClient({ initialExpenses, lbpRate = 90000 }: { i
             <CurrencyInput
               valueUsd={form.amount}
               onChange={(val) => setForm(prev => ({ ...prev, amount: val }))}
-              lbpRate={lbpRate}
               id="expense-amount"
             />
           </div>

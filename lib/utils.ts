@@ -12,25 +12,8 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-/**
- * Format a number as Lebanese Pounds (LBP)
- */
-export function formatLBP(amount: number): string {
-  return 'ل.ل\u00A0' + new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(amount));
-}
 
-/** Convert USD to LBP using the given rate */
-export function usdToLbp(usd: number, rate: number): number {
-  return usd * rate;
-}
 
-/** Convert LBP to USD using the given rate */
-export function lbpToUsd(lbp: number, rate: number): number {
-  return rate > 0 ? lbp / rate : 0;
-}
 
 /**
  * Format a date string to a readable format

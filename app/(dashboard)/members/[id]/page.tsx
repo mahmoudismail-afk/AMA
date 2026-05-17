@@ -11,7 +11,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: member }, { data: plans }, { data: rateSetting }] = await Promise.all([
+  const [{ data: member }, { data: plans }] = await Promise.all([
     supabase
       .from('members')
       .select(`
@@ -22,9 +22,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       .eq('id', id)
       .single(),
     supabase.from('membership_plans').select('*').eq('is_active', true).order('price'),
-    supabase.from('system_settings').select('value').eq('key', 'lbp_rate').single(),
   ]);
-  const lbpRate = rateSetting ? Number(rateSetting.value) || 90000 : 90000;
 
   if (!member) notFound();
 
@@ -45,7 +43,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
       </div>
 
-      <MemberDetailClient member={member} plans={plans ?? []} lbpRate={lbpRate} />
+      <MemberDetailClient member={member} plans={plans ?? []} />
     </div>
   );
 }

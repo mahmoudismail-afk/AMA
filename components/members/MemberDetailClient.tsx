@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Phone, Mail, Calendar, CreditCard,
-  Scissors, RefreshCw, AlertCircle, DollarSign, Users, MessageCircle
+  Dumbbell, RefreshCw, AlertCircle, DollarSign, Users, MessageCircle, Venus, Mars
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
-  formatDate, formatDateTime, formatCurrency, formatLBP, usdToLbp,
+  formatDate, formatDateTime, formatCurrency,
   getInitials, getMemberStatusColor, getMembershipStatusColor, daysRemaining
 } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
@@ -17,7 +17,7 @@ import CurrencyInput from '@/components/ui/CurrencyInput';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
-export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: { member: any; plans: any[]; lbpRate?: number }) {
+export default function MemberDetailClient({ member, plans }: { member: any; plans: any[] }) {
   const router = useRouter();
   const name = member.profile?.full_name ?? 'Unknown';
   const activeMembership = member.memberships?.find((m: any) => m.status === 'active');
@@ -28,7 +28,7 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
     const phone = member.profile?.phone ?? '';
     if (!phone) return;
     const name = member.profile?.full_name ?? 'there';
-    const message = `Hello ${name}, your membership at Salon Raed expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
+    const message = `Hello ${name}, your membership at AMA GYM expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -127,6 +127,18 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
                   {formatDate(member.date_of_birth)}
                 </div>
               )}
+              {member.gender && (
+                <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  {member.gender === 'male'
+                    ? <Mars size={15} style={{ color: '#60a5fa', flexShrink: 0 }} />
+                    : <Venus size={15} style={{ color: '#f472b6', flexShrink: 0 }} />}
+                  <span style={{
+                    textTransform: 'capitalize',
+                    fontWeight: 500,
+                    color: member.gender === 'male' ? '#60a5fa' : '#f472b6',
+                  }}>{member.gender}</span>
+                </div>
+              )}
             </div>
 
             {member.notes && (
@@ -152,9 +164,6 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
                   <div>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{label}</p>
                     <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{String(value)}</p>
-                    {label === 'Total Paid' && (
-                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{formatLBP(usdToLbp(totalPaid, lbpRate))}</p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -168,7 +177,7 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h4 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Scissors size={16} style={{ color: 'var(--primary-light)' }} /> Membership
+                <Dumbbell size={16} style={{ color: 'var(--primary-light)' }} /> Membership
               </h4>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {remaining !== null && remaining <= 1 && member.profile?.phone && (
@@ -230,8 +239,6 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
                         <td>{formatDate(p.payment_date)}</td>
                         <td style={{ color: 'var(--success)', fontWeight: 600 }}>
                           {formatCurrency(p.amount)}
-                          <br />
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>{formatLBP(usdToLbp(p.amount, lbpRate))}</span>
                         </td>
                         <td><span className="badge badge-neutral">{p.payment_method.replace('_', ' ')}</span></td>
                         <td style={{ color: 'var(--text-muted)' }}>{p.notes || '—'}</td>
@@ -314,7 +321,6 @@ export default function MemberDetailClient({ member, plans, lbpRate = 90000 }: {
               <CurrencyInput
                 valueUsd={renewForm.custom_price}
                 onChange={(val) => setRenewForm(prev => ({ ...prev, custom_price: val }))}
-                lbpRate={lbpRate}
                 disabled={!renewForm.record_payment}
                 id="renew-custom-price"
               />

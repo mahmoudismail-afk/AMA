@@ -10,7 +10,7 @@ export default async function PaymentsPage() {
   await requirePermission('payments');
   const supabase = await createClient();
 
-  const [{ data: payments }, { data: deletedPayments }, { data: members }, { data: rateSetting }] = await Promise.all([
+  const [{ data: payments }, { data: deletedPayments }, { data: members }] = await Promise.all([
     supabase.from('payments')
       .select('*, member:members(profile:profiles(full_name))')
       .is('deleted_at', null)
@@ -24,10 +24,7 @@ export default async function PaymentsPage() {
     supabase.from('members')
       .select('id, profile:profiles(full_name)')
       .eq('status', 'active'),
-    supabase.from('system_settings').select('value').eq('key', 'lbp_rate').single(),
   ]);
 
-  const lbpRate = rateSetting ? Number(rateSetting.value) || 90000 : 90000;
-
-  return <PaymentsClient payments={payments ?? []} deletedPayments={deletedPayments ?? []} members={members ?? []} lbpRate={lbpRate} />;
+  return <PaymentsClient payments={payments ?? []} deletedPayments={deletedPayments ?? []} members={members ?? []} />;
 }
