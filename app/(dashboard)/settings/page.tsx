@@ -29,6 +29,7 @@ export default async function SettingsPage() {
 
   const staffPermissions = await getStaffPermissions();
 
+
   return (
     <SettingsClient
       profile={profile}
