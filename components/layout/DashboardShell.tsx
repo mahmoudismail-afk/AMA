@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import BottomNav from './BottomNav';
 
 interface DashboardShellProps {
   userName: string;
@@ -16,7 +17,16 @@ interface DashboardShellProps {
 
 export default function DashboardShell({ userName, userEmail, avatarUrl, role, staffPermissions, children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
+
+  // Detect mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -25,7 +35,7 @@ export default function DashboardShell({ userName, userEmail, avatarUrl, role, s
 
   return (
     <div className="dashboard-shell">
-      {/* Overlay backdrop for mobile */}
+      {/* Overlay backdrop for mobile sidebar (tablet only, not small phones) */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
@@ -37,9 +47,16 @@ export default function DashboardShell({ userName, userEmail, avatarUrl, role, s
         />
       )}
 
-      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} role={role} staffPermissions={staffPermissions} />
+      {/* Sidebar — desktop only */}
+      <Sidebar
+        mobileOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        role={role}
+        staffPermissions={staffPermissions}
+      />
 
       <div className="dashboard-main">
+        {/* Topbar */}
         <Topbar
           userName={userName}
           userEmail={userEmail}
@@ -47,10 +64,15 @@ export default function DashboardShell({ userName, userEmail, avatarUrl, role, s
           role={role}
           onMenuClick={() => setMobileOpen(prev => !prev)}
         />
-        <main className="dashboard-content">
+
+        {/* Page content — extra bottom padding on mobile for BottomNav */}
+        <main className={`dashboard-content${isMobile ? ' dashboard-content-mobile' : ''}`}>
           {children}
         </main>
       </div>
+
+      {/* Bottom navigation — mobile only */}
+      <BottomNav role={role} staffPermissions={staffPermissions} />
     </div>
   );
 }
