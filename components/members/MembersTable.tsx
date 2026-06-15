@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 
 interface MembersTableProps {
   members: any[];
+  currentStatus?: string;
 }
 
 // Compute days left for a member based on their active membership
@@ -23,7 +24,7 @@ function getDaysLeft(m: any): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function MembersTable({ members }: MembersTableProps) {
+export default function MembersTable({ members, currentStatus = 'all' }: MembersTableProps) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -36,7 +37,30 @@ export default function MembersTable({ members }: MembersTableProps) {
     const phone = m.profile?.phone ?? '';
     if (!phone) return;
     const name = m.profile?.full_name ?? 'there';
-    const message = `Hello ${name}, your membership at AMA GYM expires ${dLeft === 0 ? 'today' : dLeft === 1 ? 'tomorrow' : `in ${dLeft} days`}! Don't forget to renew.`;
+    
+    const expiryTextEn = dLeft <= 0 
+      ? (dLeft === 0 ? 'expires today' : `expired ${Math.abs(dLeft)} days ago`) 
+      : (dLeft === 1 ? 'expires tomorrow' : `expires in ${dLeft} days`);
+
+    const expiryTextAr = dLeft <= 0 
+      ? (dLeft === 0 ? 'تنتهي اليوم' : `انتهت منذ ${Math.abs(dLeft)} أيام`) 
+      : (dLeft === 1 ? 'تنتهي غداً' : `تنتهي خلال ${dLeft} أيام`);
+
+    const message = `Hi ${name},
+Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a pleasure having you as part of our fitness community and seeing you work towards your goals!
+
+عزيزي ${name}،
+
+نأمل أن تجدك هذه الرسالة بخير وأن تكون عضويتك في AMA Fitness First جزءًا قيمًا من رحلتك في اللياقة البدنية.
+
+أردنا أن نخبرك أن عضويتك ${expiryTextAr}. ومع ذلك، نأمل ألا تكون هذه هي النهاية بل بداية التزام متجدد بصحتك وعافيتك.
+
+لتجديد عضويتك اليوم، يرجى الاتصال بنا على الرقم 
+71/113930 أو زيارة مكتب الاستقبال في AMA Fitness First.
+
+مع أطيب التحيات،
+فريق AMA Fitness First`;
+
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -140,7 +164,29 @@ export default function MembersTable({ members }: MembersTableProps) {
       if (db === null) return -1;
       return sortDays === 'asc' ? da - db : db - da;
     }
-    return 0;
+    // Fallback sort when both are 'none'
+    if (currentStatus === 'active') {
+      // Sort by days left ASC (expiring soonest)
+      const da = getDaysLeft(a);
+      const db = getDaysLeft(b);
+      
+      // If both are null (no active membership), sort by last created
+      if (da === null && db === null) {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
+    } else {
+      // Sort by last added or renewed DESC
+      const getLatestDate = (m: any) => {
+        const memberships = m.memberships ?? [];
+        if (memberships.length === 0) return new Date(m.created_at).getTime();
+        const latestMs = [...memberships].sort((x: any, y: any) => new Date(y.start_date).getTime() - new Date(x.start_date).getTime())[0];
+        return Math.max(new Date(m.created_at).getTime(), new Date(latestMs.start_date).getTime());
+      };
+      return getLatestDate(b) - getLatestDate(a);
+    }
   });
 
 

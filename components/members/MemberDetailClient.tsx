@@ -28,7 +28,30 @@ export default function MemberDetailClient({ member, plans }: { member: any; pla
     const phone = member.profile?.phone ?? '';
     if (!phone) return;
     const name = member.profile?.full_name ?? 'there';
-    const message = `Hello ${name}, your membership at AMA GYM expires ${remaining === 0 ? 'today' : remaining === 1 ? 'tomorrow' : `in ${remaining} days`}! Don't forget to renew.`;
+    
+    const expiryTextEn = remaining! <= 0 
+      ? (remaining === 0 ? 'expires today' : `expired ${Math.abs(remaining!)} days ago`) 
+      : (remaining === 1 ? 'expires tomorrow' : `expires in ${remaining} days`);
+
+    const expiryTextAr = remaining! <= 0 
+      ? (remaining === 0 ? 'تنتهي اليوم' : `انتهت منذ ${Math.abs(remaining!)} أيام`) 
+      : (remaining === 1 ? 'تنتهي غداً' : `تنتهي خلال ${remaining} أيام`);
+
+    const message = `Hi ${name},
+Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a pleasure having you as part of our fitness community and seeing you work towards your goals!
+
+عزيزي ${name}،
+
+نأمل أن تجدك هذه الرسالة بخير وأن تكون عضويتك في AMA Fitness First جزءًا قيمًا من رحلتك في اللياقة البدنية.
+
+أردنا أن نخبرك أن عضويتك ${expiryTextAr}. ومع ذلك، نأمل ألا تكون هذه هي النهاية بل بداية التزام متجدد بصحتك وعافيتك.
+
+لتجديد عضويتك اليوم، يرجى الاتصال بنا على الرقم 
+71/113930 أو زيارة مكتب الاستقبال في AMA Fitness First.
+
+مع أطيب التحيات،
+فريق AMA Fitness First`;
+
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };

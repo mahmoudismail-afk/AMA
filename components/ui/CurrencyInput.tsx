@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 
 interface CurrencyInputProps {
   /** USD value (always stored/passed in USD) */
@@ -20,12 +19,8 @@ export default function CurrencyInput({
   placeholder = '0.00',
   id,
 }: CurrencyInputProps) {
-  const [raw, setRaw] = useState(valueUsd !== '' ? String(valueUsd) : '');
-
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setRaw(val);
-    onChange(val);
+    onChange(e.target.value);
   }
 
   return (
@@ -52,7 +47,7 @@ export default function CurrencyInput({
         min="0"
         step="0.01"
         className="form-input"
-        value={raw}
+        value={valueUsd}
         onChange={handleChange}
         disabled={disabled}
         placeholder={placeholder}

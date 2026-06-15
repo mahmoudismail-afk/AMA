@@ -17,8 +17,15 @@ export default async function MembersPage({
   await requirePermission('members');
   const supabase = await createClient();
   const q = resolvedSearchParams.q ?? '';
-  const status = resolvedSearchParams.status ?? '';
-    let query = supabase
+  let statusRaw = resolvedSearchParams.status;
+
+  if (statusRaw === undefined) {
+    statusRaw = q ? 'all' : 'active';
+  }
+
+  const status = statusRaw === 'all' ? '' : statusRaw;
+
+  let query = supabase
     .from('members')
     .select(`
       id, status, created_at, gender,
@@ -66,19 +73,19 @@ export default async function MembersPage({
           />
         </form>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {['', 'active', 'inactive', 'paused', 'expired'].map((s) => (
+          {['all', 'active', 'inactive', 'paused', 'expired'].map((s) => (
             <Link
               key={s}
-              href={s ? `/members?status=${s}${q ? `&q=${q}` : ''}` : `/members${q ? `?q=${q}` : ''}`}
-              className={`btn btn-sm ${status === s ? 'btn-primary' : 'btn-secondary'}`}
+              href={`/members?status=${s}${q ? `&q=${q}` : ''}`}
+              className={`btn btn-sm ${statusRaw === s ? 'btn-primary' : 'btn-secondary'}`}
             >
-              {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
+              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
             </Link>
           ))}
         </div>
       </div>
 
-      <MembersTable members={filtered} />
+      <MembersTable members={filtered} currentStatus={statusRaw} />
     </div>
   );
 }
