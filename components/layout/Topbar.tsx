@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Bell, Search, Menu, Settings } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 interface TopbarProps {
   userName?: string;
@@ -49,6 +50,9 @@ export default function Topbar({ userName, userEmail, avatarUrl, role, onMenuCli
         >
           <Settings size={20} />
         </Link>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Notifications */}
         <button

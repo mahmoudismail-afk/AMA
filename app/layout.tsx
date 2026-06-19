@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import ThemeProvider from '@/components/providers/ThemeProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -33,7 +34,17 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* Blocking script: sets data-theme BEFORE paint to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('ama-theme');document.documentElement.setAttribute('data-theme',t||'dark');})();`,
+          }}
+        />
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
