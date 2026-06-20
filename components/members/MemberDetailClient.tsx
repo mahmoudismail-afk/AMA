@@ -12,15 +12,16 @@ import {
   getInitials, getMemberStatusColor, getMembershipStatusColor, daysRemaining
 } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
-import { renewMembership } from '@/lib/actions/members';
+import { renewMembership, pauseMembership, resumeMembership } from '@/lib/actions/members';
 import CurrencyInput from '@/components/ui/CurrencyInput';
+import { PauseCircle, PlayCircle } from 'lucide-react';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
 export default function MemberDetailClient({ member, plans }: { member: any; plans: any[] }) {
   const router = useRouter();
   const name = member.profile?.full_name ?? 'Unknown';
-  const activeMembership = member.memberships?.find((m: any) => m.status === 'active');
+  const activeMembership = member.memberships?.find((m: any) => m.status === 'active' || m.status === 'paused');
   const totalPaid = (member.payments ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0);
   const remaining = activeMembership ? daysRemaining(activeMembership.end_date) : null;
 
@@ -55,6 +56,28 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
+
+  // Pause / Resume state
+  const [pauseLoading, setPauseLoading] = useState(false);
+  const [pauseError, setPauseError] = useState('');
+
+  async function handlePause() {
+    setPauseLoading(true);
+    setPauseError('');
+    const res = await pauseMembership(member.id);
+    setPauseLoading(false);
+    if (res?.error) { setPauseError(res.error); return; }
+    router.refresh();
+  }
+
+  async function handleResume() {
+    setPauseLoading(true);
+    setPauseError('');
+    const res = await resumeMembership(member.id);
+    setPauseLoading(false);
+    if (res?.error) { setPauseError(res.error); return; }
+    router.refresh();
+  }
 
   // Renew modal state
   const [renewOpen, setRenewOpen] = useState(false);
@@ -202,10 +225,37 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
               <h4 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Dumbbell size={16} style={{ color: 'var(--primary-light)' }} /> Membership
               </h4>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {pauseError && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--danger)', alignSelf: 'center' }}>{pauseError}</span>
+                )}
                 {remaining !== null && remaining <= 1 && member.profile?.phone && (
                   <button className="btn btn-secondary btn-sm" style={{ borderColor: '#25D366', color: '#25D366' }} onClick={sendReminder}>
                     <MessageCircle size={14} /> Send Reminder
+                  </button>
+                )}
+                {member.status === 'active' && activeMembership && (
+                  <button
+                    className={`btn btn-secondary btn-sm ${pauseLoading ? 'btn-loading' : ''}`}
+                    style={{ borderColor: 'var(--warning)', color: 'var(--warning)' }}
+                    onClick={handlePause}
+                    disabled={pauseLoading}
+                    id="pause-btn"
+                  >
+                    {pauseLoading ? <span className="spinner" /> : <PauseCircle size={14} />}
+                    Pause
+                  </button>
+                )}
+                {member.status === 'paused' && (
+                  <button
+                    className={`btn btn-secondary btn-sm ${pauseLoading ? 'btn-loading' : ''}`}
+                    style={{ borderColor: 'var(--success)', color: 'var(--success)' }}
+                    onClick={handleResume}
+                    disabled={pauseLoading}
+                    id="resume-btn"
+                  >
+                    {pauseLoading ? <span className="spinner" /> : <PlayCircle size={14} />}
+                    Resume
                   </button>
                 )}
                 <button className="btn btn-primary btn-sm" onClick={() => { setRenewOpen(true); setRenewError(''); }} id="renew-btn">
