@@ -55,7 +55,7 @@ export default function SettingsClient({
 
   async function handlePasswordSave(e: React.FormEvent) {
     e.preventDefault();
-    if (pwForm.password.length < 6) { setPwMsg({ type: 'error', text: 'Password must be at least 6 characters.' }); return; }
+    if (pwForm.password.length < 8) { setPwMsg({ type: 'error', text: 'Password must be at least 8 characters.' }); return; }
     if (pwForm.password !== pwForm.confirm) { setPwMsg({ type: 'error', text: 'Passwords do not match.' }); return; }
     setPwSaving(true);
     setPwMsg(null);
@@ -231,7 +231,7 @@ export default function SettingsClient({
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPw ? 'text' : 'password'} className="form-input"
-                    placeholder="Min 6 characters"
+                    placeholder="Min 8 characters"
                     value={pwForm.password}
                     onChange={e => setPwForm(p => ({ ...p, password: e.target.value }))}
                     style={{ paddingRight: '2.5rem' }}
@@ -408,7 +408,7 @@ export default function SettingsClient({
             </div>
             <div className="form-group">
               <label className="form-label">Password <span className="required">*</span></label>
-              <input type="password" className="form-input" placeholder="Min 6 characters"
+              <input type="password" className="form-input" placeholder="Min 8 characters"
                 value={createForm.password}
                 onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))} />
             </div>

@@ -30,7 +30,7 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     COALESCE(NEW.email, ''),
     COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'admin')
+    'member' -- never trust client-controlled metadata for roles
   )
   ON CONFLICT (auth_id) DO NOTHING;
   RETURN NEW;
@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
 
 -- ================================================================
 -- ROW LEVEL SECURITY (RLS)
+-- WARNING: the permissive policies below are superseded by migrations/20261104_security_hardening.sql - run it after this file.
 -- ================================================================
 ALTER TABLE public.profiles             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.members              ENABLE ROW LEVEL SECURITY;

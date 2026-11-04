@@ -1,15 +1,19 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireStaff, getServiceClient } from '@/lib/auth/guards';
 
-// Uses service role to bypass RLS — runs only on the server
-function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+const NOT_AUTHORIZED = { error: 'Not authorized' } as const;
+
+// Verifies the caller is a signed-in admin/staff user, THEN returns the service-role client (bypasses RLS).
+// Returns null if the caller is not authorized.
+async function getAuthorizedClient() {
+  try {
+    await requireStaff();
+  } catch {
+    return null;
+  }
+  return getServiceClient();
 }
 
 export async function createMember(formData: {
@@ -24,7 +28,8 @@ export async function createMember(formData: {
   plan_id?: string;
   custom_price?: number;
 }) {
-  const supabase = getAdminClient();
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return NOT_AUTHORIZED;
 
   // 1. Create profile directly — no auth account needed
   const profileId = crypto.randomUUID();
@@ -104,7 +109,8 @@ export async function updateMember(
     status: string;
   }
 ) {
-  const supabase = getAdminClient();
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return NOT_AUTHORIZED;
 
   await supabase.from('profiles').update({
     full_name: formData.full_name,
@@ -134,7 +140,8 @@ export async function renewMembership(
     custom_price?: number;
   }
 ) {
-  const supabase = getAdminClient();
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return NOT_AUTHORIZED;
 
   const { data: plan } = await supabase
     .from('membership_plans')
@@ -190,7 +197,8 @@ export async function renewMembership(
 }
 
 export async function pauseMembership(memberId: string) {
-  const supabase = getAdminClient();
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return NOT_AUTHORIZED;
 
   // Find the current active membership
   const { data: membership, error: msErr } = await supabase
@@ -244,7 +252,8 @@ export async function pauseMembership(memberId: string) {
 }
 
 export async function resumeMembership(memberId: string) {
-  const supabase = getAdminClient();
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return NOT_AUTHORIZED;
 
   // Get the paused membership
   const { data: membership, error: msErr } = await supabase

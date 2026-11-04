@@ -21,7 +21,8 @@
     "next": "^15.3.1",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^2.15.3"
+    "recharts": "^2.15.3",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.19.5",
@@ -34,5 +35,3 @@
     "wrangler": "^4.87.0"
   }
 }
-
-
