@@ -156,7 +156,7 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   <Phone size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   <a 
-                    href={`https://wa.me/${member.profile.phone.replace(/\\D/g, '')}`} 
+                    href={`https://wa.me/${member.profile.phone.replace(/\D/g, '')}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}
@@ -354,8 +354,8 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
           )}
 
           <div className="form-group">
-            <label className="form-label">Membership Plan <span className="required">*</span></label>
-            <select name="plan_id" className="form-input" value={renewForm.plan_id} onChange={handleRenewChange}>
+            <label htmlFor="renew-membership-plan" className="form-label">Membership Plan <span className="required">*</span></label>
+            <select id="renew-membership-plan" name="plan_id" className="form-input" value={renewForm.plan_id} onChange={handleRenewChange}>
               {plans.map(p => (
                 <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)} / {p.duration_days} days</option>
               ))}
@@ -385,12 +385,12 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
 
           <div className="grid-2" style={{ gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Start Date</label>
-              <input name="start_date" type="date" className="form-input" value={renewForm.start_date} onChange={handleRenewChange} />
+              <label htmlFor="renew-start-date" className="form-label">Start Date</label>
+              <input id="renew-start-date" name="start_date" type="date" className="form-input" value={renewForm.start_date} onChange={handleRenewChange} />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Payment Amount</label>
+              <label htmlFor="renew-custom-price" className="form-label">Payment Amount</label>
               <CurrencyInput
                 valueUsd={renewForm.custom_price}
                 onChange={(val) => setRenewForm(prev => ({ ...prev, custom_price: val }))}
@@ -416,8 +416,8 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
             </div>
             {renewForm.record_payment && (
               <div className="form-group" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
-                <label className="form-label">Payment Method</label>
-                <select name="payment_method" className="form-input" value={renewForm.payment_method} onChange={handleRenewChange}>
+                <label htmlFor="renew-payment-method" className="form-label">Payment Method</label>
+                <select id="renew-payment-method" name="payment_method" className="form-input" value={renewForm.payment_method} onChange={handleRenewChange}>
                   {METHODS.map(m => <option key={m} value={m}>{m.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
                 </select>
               </div>

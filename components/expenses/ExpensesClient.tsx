@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import CurrencyInput from '@/components/ui/CurrencyInput';
+import { useToast } from '@/components/ui/Toast';
 
 export type Expense = {
   id: string;
@@ -55,6 +56,7 @@ const EMPTY_FORM = {
 
 export default function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [filterType, setFilterType] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
@@ -113,7 +115,7 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
     
     setPostingRecurring(false);
     if (addedCount > 0) router.refresh();
-    else alert('No new recurring salaries to post this month.');
+    else toast.info('No new recurring salaries to post this month.');
   }
 
   function openAdd() {
@@ -354,25 +356,25 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
 
           <div className="grid-2" style={{ gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Type <span className="required">*</span></label>
-              <select name="type" className="form-input" value={form.type} onChange={handleChange}>
+              <label htmlFor="expense-type" className="form-label">Type <span className="required">*</span></label>
+              <select id="expense-type" name="type" className="form-input" value={form.type} onChange={handleChange}>
                 {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Date <span className="required">*</span></label>
-              <input name="date" type="date" className="form-input" value={form.date} onChange={handleChange} />
+              <label htmlFor="expense-date" className="form-label">Date <span className="required">*</span></label>
+              <input id="expense-date" name="date" type="date" className="form-input" value={form.date} onChange={handleChange} />
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Title <span className="required">*</span></label>
-            <input name="title" type="text" className="form-input" placeholder="e.g. Electricity bill, Staff salary…"
+            <label htmlFor="expense-title" className="form-label">Title <span className="required">*</span></label>
+            <input id="expense-title" name="title" type="text" className="form-input" placeholder="e.g. Electricity bill, Staff salary…"
               value={form.title} onChange={handleChange} />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Amount <span className="required">*</span></label>
+            <label htmlFor="expense-amount" className="form-label">Amount <span className="required">*</span></label>
             <CurrencyInput
               valueUsd={form.amount}
               onChange={(val) => setForm(prev => ({ ...prev, amount: val }))}
@@ -381,8 +383,8 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
           </div>
 
           <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea
+            <label htmlFor="expense-notes" className="form-label">Notes</label>
+            <textarea id="expense-notes"
               name="notes"
               className="form-input"
               style={{ resize: 'vertical', minHeight: 72 }}

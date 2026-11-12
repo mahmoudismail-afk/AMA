@@ -399,34 +399,34 @@ export default function InventoryClient({
           {itemError && <div className="alert alert-danger"><AlertCircle size={15} /><span>{itemError}</span></div>}
           <div className="grid-2" style={{ gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Name <span className="required">*</span></label>
-              <input className="form-input" value={itemForm.name} onChange={e => setItemForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Water Bottle" />
+              <label htmlFor="inventory-name" className="form-label">Name <span className="required">*</span></label>
+              <input id="inventory-name" className="form-input" value={itemForm.name} onChange={e => setItemForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Water Bottle" />
             </div>
             <div className="form-group">
-              <label className="form-label">Category</label>
-              <select className="form-input" value={itemForm.category} onChange={e => setItemForm(p => ({ ...p, category: e.target.value }))}>
+              <label htmlFor="inventory-category" className="form-label">Category</label>
+              <select id="inventory-category" className="form-input" value={itemForm.category} onChange={e => setItemForm(p => ({ ...p, category: e.target.value }))}>
                 {CATEGORIES.map(c => <option key={c} value={c} style={{ textTransform: 'capitalize' }}>{c}</option>)}
               </select>
             </div>
           </div>
           <div className="grid-2" style={{ gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Cost Price <span className="required">*</span></label>
-              <input type="number" step="0.01" min="0" className="form-input" value={itemForm.cost_price} onChange={e => setItemForm(p => ({ ...p, cost_price: e.target.value }))} placeholder="0.00" />
+              <label htmlFor="inventory-cost-price" className="form-label">Cost Price <span className="required">*</span></label>
+              <input id="inventory-cost-price" type="number" inputMode="decimal" step="0.01" min="0" className="form-input" value={itemForm.cost_price} onChange={e => setItemForm(p => ({ ...p, cost_price: e.target.value }))} placeholder="0.00" />
             </div>
             <div className="form-group">
-              <label className="form-label">Sell Price <span className="required">*</span></label>
-              <input type="number" step="0.01" min="0" className="form-input" value={itemForm.sell_price} onChange={e => setItemForm(p => ({ ...p, sell_price: e.target.value }))} placeholder="0.00" />
+              <label htmlFor="inventory-sell-price" className="form-label">Sell Price <span className="required">*</span></label>
+              <input id="inventory-sell-price" type="number" inputMode="decimal" step="0.01" min="0" className="form-input" value={itemForm.sell_price} onChange={e => setItemForm(p => ({ ...p, sell_price: e.target.value }))} placeholder="0.00" />
             </div>
           </div>
           <div className="grid-2" style={{ gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Current Stock</label>
-              <input type="number" min="0" className="form-input" value={itemForm.stock_qty} onChange={e => setItemForm(p => ({ ...p, stock_qty: e.target.value }))} placeholder="0" />
+              <label htmlFor="inventory-current-stock" className="form-label">Current Stock</label>
+              <input id="inventory-current-stock" type="number" inputMode="numeric" min="0" className="form-input" value={itemForm.stock_qty} onChange={e => setItemForm(p => ({ ...p, stock_qty: e.target.value }))} placeholder="0" />
             </div>
             <div className="form-group">
-              <label className="form-label">Low Stock Alert At</label>
-              <input type="number" min="0" className="form-input" value={itemForm.low_stock_threshold} onChange={e => setItemForm(p => ({ ...p, low_stock_threshold: e.target.value }))} placeholder="5" />
+              <label htmlFor="inventory-low-stock-alert-at" className="form-label">Low Stock Alert At</label>
+              <input id="inventory-low-stock-alert-at" type="number" inputMode="numeric" min="0" className="form-input" value={itemForm.low_stock_threshold} onChange={e => setItemForm(p => ({ ...p, low_stock_threshold: e.target.value }))} placeholder="5" />
             </div>
           </div>
         </div>
@@ -451,12 +451,12 @@ export default function InventoryClient({
             </div>
           )}
           <div className="form-group">
-            <label className="form-label">Quantity <span className="required">*</span></label>
-            <input type="number" min="1" className="form-input" value={txnForm.quantity} onChange={e => setTxnForm(p => ({ ...p, quantity: e.target.value }))} />
+            <label htmlFor="inventory-quantity" className="form-label">Quantity <span className="required">*</span></label>
+            <input id="inventory-quantity" type="number" inputMode="numeric" min="1" className="form-input" value={txnForm.quantity} onChange={e => setTxnForm(p => ({ ...p, quantity: e.target.value }))} />
           </div>
           <div className="form-group">
-            <label className="form-label">Notes</label>
-            <input type="text" className="form-input" value={txnForm.notes} onChange={e => setTxnForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional…" />
+            <label htmlFor="inventory-notes" className="form-label">Notes</label>
+            <input id="inventory-notes" type="text" className="form-input" value={txnForm.notes} onChange={e => setTxnForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional…" />
           </div>
           {txnItem && txnForm.quantity && !isNaN(parseInt(txnForm.quantity)) && (
             <div style={{ textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>

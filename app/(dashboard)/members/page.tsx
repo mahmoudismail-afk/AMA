@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { UserPlus, Search } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { UserPlus } from 'lucide-react';
 import MembersTable from '@/components/members/MembersTable';
+import MemberSearch from '@/components/members/MemberSearch';
 import { requirePermission } from '@/lib/auth-guard';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Members' };
+
+const STATUSES = ['all', 'active', 'inactive', 'paused', 'expired'] as const;
 
 export default async function MembersPage({
   searchParams,
@@ -16,7 +18,7 @@ export default async function MembersPage({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   await requirePermission('members');
   const supabase = await createClient();
-  const q = resolvedSearchParams.q ?? '';
+  const q = (resolvedSearchParams.q ?? '').trim();
   let statusRaw = resolvedSearchParams.status;
 
   if (statusRaw === undefined) {
@@ -38,12 +40,20 @@ export default async function MembersPage({
 
   const { data: members } = await query;
 
-  // Filter by name/email client-side from the fetched data
+  // Match name, email or phone. Phone matching ignores spaces, dashes, "+" etc.
+  // so "70 123 456", "70123456" and "+961 70-123456" all find the same member.
+  const qLower = q.toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
   const filtered = (members ?? []).filter((m: any) => {
     if (!q) return true;
     const name = m.profile?.full_name?.toLowerCase() ?? '';
     const email = m.profile?.email?.toLowerCase() ?? '';
-    return name.includes(q.toLowerCase()) || email.includes(q.toLowerCase());
+    const phoneDigits = (m.profile?.phone ?? '').replace(/\D/g, '');
+    return (
+      name.includes(qLower) ||
+      email.includes(qLower) ||
+      (qDigits.length >= 3 && phoneDigits.includes(qDigits))
+    );
   });
 
   return (
@@ -61,31 +71,28 @@ export default async function MembersPage({
 
       {/* Filters */}
       <div className="search-bar" style={{ marginBottom: '1.5rem' }}>
-        <form className="search-input-wrapper" action="/members" method="get">
-          <Search size={16} className="search-icon" />
-          <input
-            name="q"
-            type="search"
-            className="search-input"
-            placeholder="Search by name or email..."
-            defaultValue={q}
-            id="member-search"
-          />
-        </form>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {['all', 'active', 'inactive', 'paused', 'expired'].map((s) => (
-            <Link
-              key={s}
-              href={`/members?status=${s}${q ? `&q=${q}` : ''}`}
-              className={`btn btn-sm ${statusRaw === s ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-            </Link>
-          ))}
-        </div>
+        <MemberSearch initialQuery={q} />
+        <nav className="chip-row" aria-label="Filter by status">
+          {STATUSES.map((s) => {
+            const params = new URLSearchParams({ status: s });
+            if (q) params.set('q', q);
+            const active = statusRaw === s;
+            return (
+              <Link
+                key={s}
+                href={`/members?${params.toString()}`}
+                className={`btn btn-sm ${active ? 'btn-primary' : 'btn-secondary'}`}
+                aria-current={active ? 'page' : undefined}
+                scroll={false}
+              >
+                {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
-      <MembersTable members={filtered} currentStatus={statusRaw} />
+      <MembersTable members={filtered} currentStatus={statusRaw} searchQuery={q} />
     </div>
   );
 }

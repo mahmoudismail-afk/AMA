@@ -6,11 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Eye, Edit, Trash2, RefreshCw, MessageCircle } from 'lucide-react';
 import { getInitials, getMemberStatusColor, formatDate } from '@/lib/utils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import { createClient } from '@/lib/supabase/client';
+import { buildReminderUrl, whatsappNumber } from '@/lib/whatsapp';
 
 interface MembersTableProps {
   members: any[];
   currentStatus?: string;
+  searchQuery?: string;
 }
 
 // Compute days left for a member based on their active membership
@@ -24,8 +27,9 @@ function getDaysLeft(m: any): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function MembersTable({ members, currentStatus = 'all' }: MembersTableProps) {
+export default function MembersTable({ members, currentStatus = 'all', searchQuery = '' }: MembersTableProps) {
   const router = useRouter();
+  const toast = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   // 'none' = default order, 'asc' = expiring soonest first, 'desc' = most time remaining first
@@ -36,33 +40,7 @@ export default function MembersTable({ members, currentStatus = 'all' }: Members
   const sendReminder = (m: any, dLeft: number) => {
     const phone = m.profile?.phone ?? '';
     if (!phone) return;
-    const name = m.profile?.full_name ?? 'there';
-    
-    const expiryTextEn = dLeft <= 0 
-      ? (dLeft === 0 ? 'expires today' : `expired ${Math.abs(dLeft)} days ago`) 
-      : (dLeft === 1 ? 'expires tomorrow' : `expires in ${dLeft} days`);
-
-    const expiryTextAr = dLeft <= 0 
-      ? (dLeft === 0 ? 'تنتهي اليوم' : `انتهت منذ ${Math.abs(dLeft)} أيام`) 
-      : (dLeft === 1 ? 'تنتهي غداً' : `تنتهي خلال ${dLeft} أيام`);
-
-    const message = `Hi ${name},
-Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a pleasure having you as part of our fitness community and seeing you work towards your goals!
-
-عزيزي ${name}،
-
-نأمل أن تجدك هذه الرسالة بخير وأن تكون عضويتك في AMA Fitness First جزءًا قيمًا من رحلتك في اللياقة البدنية.
-
-أردنا أن نخبرك أن عضويتك ${expiryTextAr}. ومع ذلك، نأمل ألا تكون هذه هي النهاية بل بداية التزام متجدد بصحتك وعافيتك.
-
-لتجديد عضويتك اليوم، يرجى الاتصال بنا على الرقم 
-71/113930 أو زيارة مكتب الاستقبال في AMA Fitness First.
-
-مع أطيب التحيات،
-فريق AMA Fitness First`;
-
-    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(buildReminderUrl(phone, m.profile?.full_name ?? 'there', dLeft), '_blank');
   };
 
   // Auto-expire: when the table loads, patch any membership/member whose end_date has passed
@@ -111,9 +89,14 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
     if (!deleteId) return;
     setDeleting(true);
     const supabase = createClient();
-    await supabase.from('members').delete().eq('id', deleteId);
-    setDeleteId(null);
+    const { error } = await supabase.from('members').delete().eq('id', deleteId);
     setDeleting(false);
+    if (error) {
+      toast.error(`Could not delete member: ${error.message}`);
+      return;
+    }
+    setDeleteId(null);
+    toast.success('Member deleted');
     router.refresh();
   }
 
@@ -202,9 +185,15 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </div>
-        <h3 style={{ color: 'var(--text-primary)' }}>No members found</h3>
+        <h3 style={{ color: 'var(--text-primary)' }}>
+          {searchQuery ? `No members match "${searchQuery}"` : 'No members found'}
+        </h3>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          Add your first member to get started.
+          {searchQuery
+            ? 'Check the spelling, try part of the phone number, or switch the status filter to "All".'
+            : currentStatus !== 'all'
+              ? `There are no ${currentStatus} members right now.`
+              : 'Add your first member to get started.'}
         </p>
         <Link href="/members/new" className="btn btn-primary btn-sm">Add Member</Link>
       </div>
@@ -320,7 +309,7 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
                   <td>
                     {phone ? (
                       <a 
-                        href={`https://wa.me/${phone.replace(/\\D/g, '')}`} 
+                        href={`https://wa.me/${whatsappNumber(phone)}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         style={{ color: 'var(--primary)', textDecoration: 'none' }}
@@ -356,7 +345,7 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
                                 : `Expired ${Math.abs(daysLeft)}d ago`
                               : `${daysLeft}d left`}
                           </span>
-                          {daysLeft !== null && daysLeft <= 1 && phone && (
+                          {daysLeft !== null && daysLeft <= 3 && phone && (
                             <button
                               onClick={() => sendReminder(m, daysLeft)}
                               style={{
@@ -369,6 +358,7 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
                                 marginLeft: '6px'
                               }}
                               title="Send WhatsApp Reminder"
+                              aria-label={`Send WhatsApp reminder to ${name}`}
                             >
                               <MessageCircle size={14} />
                             </button>
@@ -389,15 +379,16 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.375rem', justifyContent: 'flex-end' }}>
-                      <Link href={`/members/${m.id}`} className="btn btn-ghost btn-sm btn-icon" title="View">
+                      <Link href={`/members/${m.id}`} className="btn btn-ghost btn-sm btn-icon" title="View" aria-label={`View ${name}`}>
                         <Eye size={15} />
                       </Link>
-                      <Link href={`/members/${m.id}/edit`} className="btn btn-ghost btn-sm btn-icon" title="Edit">
+                      <Link href={`/members/${m.id}/edit`} className="btn btn-ghost btn-sm btn-icon" title="Edit" aria-label={`Edit ${name}`}>
                         <Edit size={15} />
                       </Link>
                       <button
                         className="btn btn-ghost btn-sm btn-icon"
                         title="Delete"
+                        aria-label={`Delete ${name}`}
                         onClick={() => setDeleteId(m.id)}
                         style={{ color: 'var(--danger)' }}
                       >

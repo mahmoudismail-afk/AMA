@@ -20,7 +20,8 @@ export default async function ReportsPage() {
     { data: inventoryTxns },
     { data: expenses },
   ] = await Promise.all([
-    supabase.from('payments').select('amount, payment_date, payment_method').order('payment_date'),
+    // Exclude soft-deleted payments (same rule as the dashboard), otherwise revenue is overstated
+    supabase.from('payments').select('amount, payment_date, payment_method').is('deleted_at', null).order('payment_date'),
     supabase.from('members').select('id, status, created_at'),
     supabase.from('memberships').select('plan_id, status, membership_plans(name)'),
     supabase.from('membership_plans').select('id, name'),

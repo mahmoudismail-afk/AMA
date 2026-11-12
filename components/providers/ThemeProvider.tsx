@@ -26,6 +26,11 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   }, []);
 
   function toggle() {
+    // Animate colors only during the switch (see .theme-transition in globals.css)
+    const root = document.documentElement;
+    root.classList.add('theme-transition');
+    window.setTimeout(() => root.classList.remove('theme-transition'), 250);
+
     setTheme(prev => {
       const next: Theme = prev === 'dark' ? 'light' : 'dark';
       localStorage.setItem('ama-theme', next);

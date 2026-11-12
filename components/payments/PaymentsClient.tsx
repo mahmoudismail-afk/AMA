@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, DollarSign, AlertCircle, Trash2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, todayLocal } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import CurrencyInput from '@/components/ui/CurrencyInput';
+import { useToast } from '@/components/ui/Toast';
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'other'];
 
@@ -25,6 +26,7 @@ export default function PaymentsClient({
   members: any[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [payments, setPayments] = useState(initial);
   const [deletedPayments, setDeletedPayments] = useState(initialDeleted);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -35,7 +37,7 @@ export default function PaymentsClient({
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     member_id: '', payer_name: '', amount: '', payment_method: 'cash',
-    payment_date: new Date().toISOString().split('T')[0], notes: '',
+    payment_date: todayLocal(), notes: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -46,7 +48,9 @@ export default function PaymentsClient({
   const [restoring, setRestoringId] = useState<string | null>(null);
 
   const filteredMembers = members.filter((m) =>
-    (m.profile?.full_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+    (m.profile?.full_name ?? '').toLowerCase().includes(searchTerm.trim().toLowerCase())
+    || (searchTerm.replace(/\D/g, '').length >= 3
+        && (m.profile?.phone ?? '').replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')))
   );
 
   const totalRevenue = payments.reduce((s, p) => s + Number(p.amount), 0);
@@ -56,7 +60,7 @@ export default function PaymentsClient({
   }
 
   function resetModal() {
-    setForm({ member_id: '', payer_name: '', amount: '', payment_method: 'cash', payment_date: new Date().toISOString().split('T')[0], notes: '' });
+    setForm({ member_id: '', payer_name: '', amount: '', payment_method: 'cash', payment_date: todayLocal(), notes: '' });
     setSearchTerm('');
     setError('');
   }
@@ -87,6 +91,7 @@ export default function PaymentsClient({
 
     if (err) { setError(err.message); setSaving(false); return; }
     if (data) setPayments((prev) => [data, ...prev]);
+    toast.success(`Payment of ${formatCurrency(Number(form.amount))} recorded`);
     setModalOpen(false);
     setSaving(false);
     resetModal();
@@ -103,12 +108,19 @@ export default function PaymentsClient({
       .update({ deleted_at: now })
       .eq('id', paymentToDelete.id);
 
-    if (err) { setDeleting(false); return; }
+    if (err) {
+      setDeleting(false);
+      toast.error(`Could not delete payment: ${err.message}`);
+      return;
+    }
 
     const deleted = { ...paymentToDelete, deleted_at: now };
     setPayments((prev) => prev.filter((p) => p.id !== paymentToDelete.id));
     setDeletedPayments((prev) => [deleted, ...prev]);
     setPaymentToDelete(null);
+    toast.success('Payment deleted', {
+      action: { label: 'Undo', onClick: () => handleRestore(deleted) },
+    });
     setDeleting(false);
   }
 
@@ -123,8 +135,10 @@ export default function PaymentsClient({
     if (!err) {
       const restored = { ...payment, deleted_at: null };
       setDeletedPayments((prev) => prev.filter((p) => p.id !== payment.id));
-      setPayments((prev) => [restored, ...prev]);
+      setPayments((prev) => [restored, ...prev.filter((p) => p.id !== payment.id)]);
+      toast.success('Payment restored');
     }
+    if (err) toast.error(`Could not restore payment: ${err.message}`);
     setRestoringId(null);
   }
 
@@ -279,8 +293,8 @@ export default function PaymentsClient({
 
           {/* Name field: free-text with optional member dropdown */}
           <div className="form-group" style={{ position: 'relative' }}>
-            <label className="form-label">Name <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional — type any name or pick a member)</span></label>
-            <input
+            <label htmlFor="payment-name" className="form-label">Name <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional — type any name or pick a member)</span></label>
+            <input id="payment-name"
               type="text"
               className="form-input"
               placeholder="Search member or type any name..."
@@ -327,7 +341,7 @@ export default function PaymentsClient({
           </div>
           <div className="grid-2" style={{ gap: '0.875rem' }}>
             <div className="form-group">
-              <label className="form-label">Amount <span className="required">*</span></label>
+              <label htmlFor="payment-amount" className="form-label">Amount <span className="required">*</span></label>
               <CurrencyInput
                 valueUsd={form.amount}
                 onChange={(val) => setForm(prev => ({ ...prev, amount: val }))}
@@ -335,19 +349,19 @@ export default function PaymentsClient({
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Payment Method</label>
-              <select name="payment_method" className="form-input" value={form.payment_method} onChange={handleChange}>
+              <label htmlFor="payment-payment-method" className="form-label">Payment Method</label>
+              <select id="payment-payment-method" name="payment_method" className="form-input" value={form.payment_method} onChange={handleChange}>
                 {METHODS.map((m) => <option key={m} value={m}>{methodLabel(m)}</option>)}
               </select>
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Payment Date</label>
-            <input name="payment_date" type="date" className="form-input" value={form.payment_date} onChange={handleChange} />
+            <label htmlFor="payment-payment-date" className="form-label">Payment Date</label>
+            <input id="payment-payment-date" name="payment_date" type="date" className="form-input" value={form.payment_date} onChange={handleChange} />
           </div>
           <div className="form-group">
-            <label className="form-label">Notes</label>
-            <input name="notes" type="text" className="form-input" placeholder="e.g. Monthly renewal" value={form.notes} onChange={handleChange} />
+            <label htmlFor="payment-notes" className="form-label">Notes</label>
+            <input id="payment-notes" name="notes" type="text" className="form-input" placeholder="e.g. Monthly renewal" value={form.notes} onChange={handleChange} />
           </div>
         </div>
       </Modal>

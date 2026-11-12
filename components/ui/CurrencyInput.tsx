@@ -44,6 +44,7 @@ export default function CurrencyInput({
       <input
         id={id}
         type="number"
+        inputMode="decimal"
         min="0"
         step="0.01"
         className="form-input"

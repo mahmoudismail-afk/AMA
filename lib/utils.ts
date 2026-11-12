@@ -160,3 +160,36 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
     timer = setTimeout(() => fn(...args), delay);
   };
 }
+
+
+/**
+ * Today's date as YYYY-MM-DD in the user's LOCAL timezone.
+ * (`new Date().toISOString().split('T')[0]` returns the UTC date, which is
+ * yesterday between 00:00 and 02:00 in Lebanon.)
+ */
+export function todayLocal(): string {
+  return toLocalDateString(new Date());
+}
+
+/** Format a Date as YYYY-MM-DD using local time (not UTC). */
+export function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** The gym's timezone — used on the server (Cloudflare runs in UTC). */
+export const GYM_TIMEZONE = 'Asia/Beirut';
+
+/** Today's date (YYYY-MM-DD) in the gym's timezone, safe to call on the server. */
+export function todayInGymTz(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: GYM_TIMEZONE }).format(new Date());
+}
+
+/** Whole days from date string `from` to date string `to` (both YYYY-MM-DD). */
+export function daysBetween(from: string, to: string): number {
+  const [y1, m1, d1] = from.split('-').map(Number);
+  const [y2, m2, d2] = to.split('-').map(Number);
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86_400_000);
+}

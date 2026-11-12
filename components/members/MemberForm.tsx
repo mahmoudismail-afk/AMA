@@ -91,42 +91,42 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
           </h3>
           <div className="grid-2" style={{ gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Full Name <span className="required">*</span></label>
+              <label htmlFor="member-full-name" className="form-label">Full Name <span className="required">*</span></label>
               <div className="input-with-icon">
                 <User size={15} className="input-icon" />
-                <input name="full_name" type="text" className="form-input"
+                <input id="member-full-name" name="full_name" type="text" className="form-input"
                   placeholder="John Smith" value={form.full_name} onChange={handleChange} required />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Phone Number <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
+              <label htmlFor="member-phone-number" className="form-label">Phone Number <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
               <div className="input-with-icon">
                 <Phone size={15} className="input-icon" />
-                <input name="phone" type="tel" className="form-input"
+                <input id="member-phone-number" name="phone" type="tel" className="form-input"
                   placeholder="+1 555 000 0000" value={form.phone} onChange={handleChange} />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email Address <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
+              <label htmlFor="member-email-address" className="form-label">Email Address <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
               <div className="input-with-icon">
                 <Mail size={15} className="input-icon" />
-                <input name="email" type="email" className="form-input"
+                <input id="member-email-address" name="email" type="email" className="form-input"
                   placeholder="john@example.com" value={form.email} onChange={handleChange}
                   disabled={isEdit} />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Date of Birth</label>
-              <input name="date_of_birth" type="date" className="form-input"
+              <label htmlFor="member-date-of-birth" className="form-label">Date of Birth</label>
+              <input id="member-date-of-birth" name="date_of_birth" type="date" className="form-input"
                 value={form.date_of_birth} onChange={handleChange} />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Gender</label>
-              <select name="gender" className="form-input" value={form.gender} onChange={handleChange}>
+              <label htmlFor="member-gender" className="form-label">Gender</label>
+              <select id="member-gender" name="gender" className="form-input" value={form.gender} onChange={handleChange}>
                 <option value="">Select gender</option>
                 <option value="male">♂ Male</option>
                 <option value="female">♀ Female</option>
@@ -135,8 +135,8 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
 
 
             <div className="form-group">
-              <label className="form-label">Status</label>
-              <select name="status" className="form-input" value={form.status} onChange={handleChange}>
+              <label htmlFor="member-status" className="form-label">Status</label>
+              <select id="member-status" name="status" className="form-input" value={form.status} onChange={handleChange}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="paused">Paused</option>
@@ -145,10 +145,10 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
             </div>
 
             <div className="form-group">
-              <label className="form-label">Membership Start Date <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
+              <label htmlFor="member-membership-start-date" className="form-label">Membership Start Date <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
               <div className="input-with-icon">
                 <Calendar size={15} className="input-icon" />
-                <input name="joined_at" type="date" className="form-input"
+                <input id="member-membership-start-date" name="joined_at" type="date" className="form-input"
                   value={form.joined_at} onChange={handleChange}
                   max={new Date().toISOString().split('T')[0]} />
               </div>
@@ -163,8 +163,8 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
             <h3 style={{ color: 'var(--text-primary)', marginBottom: '1.25rem' }}>Membership Plan</h3>
             <div className="grid-2" style={{ gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">Assign Plan <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
-                <select name="plan_id" className="form-input" value={form.plan_id} onChange={(e) => {
+                <label htmlFor="member-assign-plan" className="form-label">Assign Plan <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>(optional)</span></label>
+                <select id="member-assign-plan" name="plan_id" className="form-input" value={form.plan_id} onChange={(e) => {
                   const pid = e.target.value;
                   const selectedPlan = plans.find(p => p.id === pid);
                   setForm(prev => ({
@@ -185,7 +185,7 @@ export default function MemberForm({ plans, member, profile, isEdit = false }: M
               
               {form.plan_id && (
                 <div className="form-group">
-                  <label className="form-label">Payment Amount</label>
+                  <label htmlFor="custom-price" className="form-label">Payment Amount</label>
                   <CurrencyInput
                     valueUsd={form.custom_price}
                     onChange={(val) => setForm(prev => ({ ...prev, custom_price: val }))}

@@ -22,7 +22,7 @@ export default async function PaymentsPage() {
       .order('deleted_at', { ascending: false })
       .limit(200),
     supabase.from('members')
-      .select('id, profile:profiles(full_name)')
+      .select('id, profile:profiles(full_name, phone)')
       .eq('status', 'active'),
   ]);
 

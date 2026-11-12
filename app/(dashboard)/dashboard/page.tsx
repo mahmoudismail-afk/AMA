@@ -4,10 +4,55 @@ import { formatCurrency, getLastNMonths } from '@/lib/utils';
 import StatCard from '@/components/dashboard/StatCard';
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import DashboardRefresher from '@/components/dashboard/DashboardRefresher';
+import NeedsAttention, { type AttentionItem } from '@/components/dashboard/NeedsAttention';
+import { todayInGymTz, daysBetween } from '@/lib/utils';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 export const dynamic = 'force-dynamic';
+
+/**
+ * Members whose latest membership ends within the next 3 days or ended in the last 7 days.
+ * Uses the member's LATEST end date, so anyone who already renewed drops off the list.
+ */
+async function getAttentionItems(): Promise<AttentionItem[]> {
+  try {
+    const supabase = await createClient();
+    const today = todayInGymTz();
+    const [y, m, d] = today.split('-').map(Number);
+    const weekAgo = new Date(Date.UTC(y, m - 1, d - 7)).toISOString().slice(0, 10);
+
+    const { data } = await supabase
+      .from('memberships')
+      .select('member_id, end_date, status, plan:membership_plans(name), member:members(id, status, profile:profiles(full_name, phone))')
+      .in('status', ['active', 'expired'])
+      .gte('end_date', weekAgo);
+
+    const latest = new Map<string, any>();
+    for (const ms of (data ?? []) as any[]) {
+      if (!ms.end_date || !ms.member) continue;
+      const prev = latest.get(ms.member_id);
+      if (!prev || ms.end_date > prev.end_date) latest.set(ms.member_id, ms);
+    }
+
+    return Array.from(latest.values())
+      .filter((ms) => ms.member.status !== 'paused' && ms.member.status !== 'inactive')
+      .map((ms) => ({
+        memberId: ms.member.id as string,
+        name: (ms.member.profile?.full_name as string) ?? 'Unknown',
+        phone: (ms.member.profile?.phone as string) ?? null,
+        planName: (ms.plan?.name as string) ?? null,
+        endDate: ms.end_date as string,
+        daysLeft: daysBetween(today, ms.end_date),
+      }))
+      .filter((it) => it.daysLeft <= 3 && it.daysLeft >= -7)
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+      .slice(0, 12);
+  } catch (error) {
+    console.error('Error fetching attention items:', error);
+    return [];
+  }
+}
 
 async function getDashboardData() {
   const months = getLastNMonths(6);
@@ -159,7 +204,7 @@ async function getDashboardData() {
 }
 
 export default async function DashboardPage() {
-  const { stats, revenueData, memberGrowthData, planData, genderData } = await getDashboardData();
+  const [{ stats, revenueData, memberGrowthData, planData, genderData }, attention] = await Promise.all([getDashboardData(), getAttentionItems()]);
 
   return (
     <div>
@@ -175,6 +220,9 @@ export default async function DashboardPage() {
           <Activity size={14} /> Live
         </div>
       </div>
+
+      {/* Follow-ups for the front desk */}
+      <NeedsAttention items={attention} />
 
       {/* Members + Monthly Revenue row */}
       <div className="grid-3" style={{ marginBottom: '1.25rem' }}>

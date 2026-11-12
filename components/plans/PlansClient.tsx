@@ -173,30 +173,30 @@ export default function PlansClient({ plans: initialPlans }: { plans: Plan[] }) 
             </div>
           )}
           <div className="form-group">
-            <label className="form-label">Plan Name <span className="required">*</span></label>
-            <input name="name" type="text" className="form-input" placeholder="e.g. Premium Monthly"
+            <label htmlFor="plan-plan-name" className="form-label">Plan Name <span className="required">*</span></label>
+            <input id="plan-plan-name" name="name" type="text" className="form-input" placeholder="e.g. Premium Monthly"
               value={form.name} onChange={handleChange} required />
           </div>
           <div className="form-group">
-            <label className="form-label">Description</label>
-            <input name="description" type="text" className="form-input" placeholder="Short description"
+            <label htmlFor="plan-description" className="form-label">Description</label>
+            <input id="plan-description" name="description" type="text" className="form-input" placeholder="Short description"
               value={form.description} onChange={handleChange} />
           </div>
           <div className="grid-2" style={{ gap: '0.875rem' }}>
             <div className="form-group">
-              <label className="form-label">Price (USD) <span className="required">*</span></label>
-              <input name="price" type="number" min="0" step="0.01" className="form-input"
+              <label htmlFor="plan-price" className="form-label">Price (USD) <span className="required">*</span></label>
+              <input id="plan-price" name="price" type="number" inputMode="decimal" min="0" step="0.01" className="form-input"
                 placeholder="29.99" value={form.price} onChange={handleChange} required />
             </div>
             <div className="form-group">
-              <label className="form-label">Duration (days) <span className="required">*</span></label>
-              <input name="duration_days" type="number" min="1" className="form-input"
+              <label htmlFor="plan-duration" className="form-label">Duration (days) <span className="required">*</span></label>
+              <input id="plan-duration" name="duration_days" type="number" inputMode="numeric" min="1" className="form-input"
                 placeholder="30" value={form.duration_days} onChange={handleChange} required />
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Features</label>
-            <input name="features" type="text" className="form-input"
+            <label htmlFor="plan-features" className="form-label">Features</label>
+            <input id="plan-features" name="features" type="text" className="form-input"
               placeholder="Gym access, All classes, Sauna (comma separated)"
               value={form.features} onChange={handleChange} />
             <span className="form-hint">Separate features with commas.</span>

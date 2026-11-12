@@ -190,16 +190,16 @@ export default function SettingsClient({
 
             <form onSubmit={handleProfileSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label"><User size={13} style={{ display: 'inline', marginRight: 5 }} />Full Name</label>
-                <input
+                <label htmlFor="settings-full-name" className="form-label"><User size={13} style={{ display: 'inline', marginRight: 5 }} />Full Name</label>
+                <input id="settings-full-name"
                   type="text" className="form-input"
                   value={profileForm.full_name}
                   onChange={e => setProfileForm(p => ({ ...p, full_name: e.target.value }))}
                 />
               </div>
               <div className="form-group">
-                <label className="form-label"><Phone size={13} style={{ display: 'inline', marginRight: 5 }} />Phone</label>
-                <input
+                <label htmlFor="settings-phone" className="form-label"><Phone size={13} style={{ display: 'inline', marginRight: 5 }} />Phone</label>
+                <input id="settings-phone"
                   type="tel" className="form-input"
                   value={profileForm.phone}
                   onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
@@ -227,9 +227,9 @@ export default function SettingsClient({
 
             <form onSubmit={handlePasswordSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">New Password</label>
+                <label htmlFor="settings-new-password" className="form-label">New Password</label>
                 <div style={{ position: 'relative' }}>
-                  <input
+                  <input id="settings-new-password"
                     type={showPw ? 'text' : 'password'} className="form-input"
                     placeholder="Min 8 characters"
                     value={pwForm.password}
@@ -243,8 +243,8 @@ export default function SettingsClient({
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Confirm Password</label>
-                <input
+                <label htmlFor="settings-confirm-password" className="form-label">Confirm Password</label>
+                <input id="settings-confirm-password"
                   type={showPw ? 'text' : 'password'} className="form-input"
                   placeholder="Repeat new password"
                   value={pwForm.confirm}
@@ -389,32 +389,32 @@ export default function SettingsClient({
           )}
           <div className="grid-2" style={{ gap: '0.875rem' }}>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Full Name <span className="required">*</span></label>
-              <input type="text" className="form-input" placeholder="Jane Doe"
+              <label htmlFor="settings-full-name-2" className="form-label">Full Name <span className="required">*</span></label>
+              <input id="settings-full-name-2" type="text" className="form-input" placeholder="Jane Doe"
                 value={createForm.fullName}
                 onChange={e => setCreateForm(p => ({ ...p, fullName: e.target.value }))} />
             </div>
             <div className="form-group">
-              <label className="form-label">Username <span className="required">*</span></label>
-              <input type="text" className="form-input" placeholder="jane"
+              <label htmlFor="settings-username" className="form-label">Username <span className="required">*</span></label>
+              <input id="settings-username" type="text" className="form-input" placeholder="jane"
                 value={createForm.username}
                 onChange={e => setCreateForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/\s+/g, '') }))} />
             </div>
             <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input type="tel" className="form-input" placeholder="+1 555 000 0000"
+              <label htmlFor="settings-phone-2" className="form-label">Phone</label>
+              <input id="settings-phone-2" type="tel" className="form-input" placeholder="+1 555 000 0000"
                 value={createForm.phone}
                 onChange={e => setCreateForm(p => ({ ...p, phone: e.target.value }))} />
             </div>
             <div className="form-group">
-              <label className="form-label">Password <span className="required">*</span></label>
-              <input type="password" className="form-input" placeholder="Min 8 characters"
+              <label htmlFor="settings-password" className="form-label">Password <span className="required">*</span></label>
+              <input id="settings-password" type="password" className="form-input" placeholder="Min 8 characters"
                 value={createForm.password}
                 onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))} />
             </div>
             <div className="form-group">
-              <label className="form-label">Role</label>
-              <select className="form-input" value={createForm.role}
+              <label htmlFor="settings-role" className="form-label">Role</label>
+              <select id="settings-role" className="form-input" value={createForm.role}
                 onChange={e => setCreateForm(p => ({ ...p, role: e.target.value as 'staff' | 'admin' }))}>
                 <option value="staff">Staff</option>
                 <option value="admin">Admin</option>
