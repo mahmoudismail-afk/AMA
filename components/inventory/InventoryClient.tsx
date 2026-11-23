@@ -6,7 +6,7 @@ import {
   Plus, Package, ShoppingCart, TrendingUp, TrendingDown,
   AlertTriangle, Pencil, Trash2, RefreshCcw, CheckCircle, AlertCircle, Filter,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { saveInventoryItem, deleteInventoryItem, recordInventoryTransaction } from '@/lib/actions/inventory';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -105,32 +105,31 @@ export default function InventoryClient({
     if (!itemForm.name.trim()) { setItemError('Name is required.'); return; }
     const cost = parseFloat(itemForm.cost_price);
     const sell = parseFloat(itemForm.sell_price);
-    const qty = parseInt(itemForm.stock_qty);
-    const threshold = parseInt(itemForm.low_stock_threshold);
+    const qty = parseInt(itemForm.stock_qty, 10);
+    const threshold = parseInt(itemForm.low_stock_threshold, 10);
     if (isNaN(cost) || cost < 0) { setItemError('Enter a valid cost price.'); return; }
     if (isNaN(sell) || sell < 0) { setItemError('Enter a valid sell price.'); return; }
     if (isNaN(qty) || qty < 0) { setItemError('Enter a valid quantity.'); return; }
 
     setSavingItem(true);
     setItemError('');
-    const supabase = createClient();
-    const payload = {
+    const res = await saveInventoryItem({
+      id: editingItem?.id,
       name: itemForm.name.trim(),
       category: itemForm.category,
       cost_price: cost,
       sell_price: sell,
       stock_qty: qty,
       low_stock_threshold: isNaN(threshold) ? 5 : threshold,
-    };
+    });
 
-    if (editingItem) {
-      const { error } = await supabase.from('inventory_items').update(payload).eq('id', editingItem.id);
-      if (error) { setItemError(error.message); setSavingItem(false); return; }
-      setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...payload } : i));
-    } else {
-      const { data, error } = await supabase.from('inventory_items').insert(payload).select().single();
-      if (error) { setItemError(error.message); setSavingItem(false); return; }
-      setItems(prev => [data, ...prev]);
+    if (res.error) { setItemError(res.error); setSavingItem(false); return; }
+    if (res.data) {
+      if (editingItem) {
+        setItems(prev => prev.map(i => i.id === editingItem.id ? res.data : i));
+      } else {
+        setItems(prev => [res.data, ...prev]);
+      }
     }
     setSavingItem(false);
     setItemModal(false);
@@ -140,9 +139,10 @@ export default function InventoryClient({
   async function handleDeleteItem() {
     if (!deleteItem) return;
     setDeletingItem(true);
-    const supabase = createClient();
-    await supabase.from('inventory_items').delete().eq('id', deleteItem.id);
-    setItems(prev => prev.filter(i => i.id !== deleteItem.id));
+    const res = await deleteInventoryItem(deleteItem.id);
+    if (!res.error) {
+      setItems(prev => prev.filter(i => i.id !== deleteItem.id));
+    }
     setDeleteItem(null);
     setDeletingItem(false);
     router.refresh();
@@ -158,7 +158,7 @@ export default function InventoryClient({
 
   async function handleSaveTxn() {
     if (!txnItem) return;
-    const qty = parseInt(txnForm.quantity);
+    const qty = parseInt(txnForm.quantity, 10);
     if (isNaN(qty) || qty <= 0) { setTxnError('Quantity must be at least 1.'); return; }
     if (txnForm.type === 'sale' && qty > txnItem.stock_qty) {
       setTxnError(`Not enough stock. Available: ${txnItem.stock_qty}`);
@@ -167,28 +167,22 @@ export default function InventoryClient({
 
     setSavingTxn(true);
     setTxnError('');
-    const supabase = createClient();
-    const unitPrice = txnForm.type === 'sale' ? txnItem.sell_price : txnItem.cost_price;
-    const totalAmount = qty * unitPrice;
-    const newStock = txnForm.type === 'sale' ? txnItem.stock_qty - qty : txnItem.stock_qty + qty;
+    const res = await recordInventoryTransaction({
+      item_id: txnItem.id,
+      type: txnForm.type,
+      quantity: qty,
+      notes: txnForm.notes || null,
+    });
 
-    const { data: txnData, error: txnErr } = await supabase
-      .from('inventory_transactions')
-      .insert({ item_id: txnItem.id, type: txnForm.type, quantity: qty, unit_price: unitPrice, total_amount: totalAmount, notes: txnForm.notes || null })
-      .select()
-      .single();
+    if (res.error) { setTxnError(res.error); setSavingTxn(false); return; }
 
-    if (txnErr) { setTxnError(txnErr.message); setSavingTxn(false); return; }
-
-    const { error: stockErr } = await supabase
-      .from('inventory_items')
-      .update({ stock_qty: newStock })
-      .eq('id', txnItem.id);
-
-    if (stockErr) { setTxnError(stockErr.message); setSavingTxn(false); return; }
-
-    setTransactions(prev => [{ ...txnData, inventory_items: { name: txnItem.name } }, ...prev]);
-    setItems(prev => prev.map(i => i.id === txnItem.id ? { ...i, stock_qty: newStock } : i));
+    if (res.data) {
+      setTransactions(prev => [{ ...res.data, inventory_items: { name: txnItem.name } }, ...prev]);
+    }
+    if (typeof res.newStock === 'number') {
+      const updatedStock = res.newStock;
+      setItems(prev => prev.map(i => i.id === txnItem.id ? { ...i, stock_qty: updatedStock } : i));
+    }
     setSavingTxn(false);
     setTxnModal(false);
     router.refresh();

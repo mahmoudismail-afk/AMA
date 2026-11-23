@@ -6,7 +6,7 @@ import {
   Plus, Trash2, Pencil, AlertCircle, Receipt,
   Wallet, TrendingDown, Filter, CheckCircle,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { saveExpense, deleteExpense, postRecurringSalaries } from '@/lib/actions/expenses';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -76,46 +76,20 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
 
   async function handlePostRecurring() {
     setPostingRecurring(true);
-    const supabase = createClient();
-    
-    // Find all recurring salaries
-    const recurringSalaries = expenses.filter(e => e.type === 'salary' && e.is_recurring);
-    const uniqueTitles = Array.from(new Set(recurringSalaries.map(e => e.title)));
-
-    const currentMonthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const today = new Date().toISOString().split('T')[0];
-    
-    let addedCount = 0;
-
-    for (const title of uniqueTitles) {
-      // Find latest template for this title
-      const template = recurringSalaries.find(e => e.title === title)!;
-      
-      // Check if it already exists this month
-      const existsThisMonth = expenses.some(e => 
-        e.title === title && e.date.startsWith(currentMonthPrefix)
-      );
-
-      if (!existsThisMonth) {
-        const payload = {
-          type: 'salary',
-          title: template.title,
-          amount: template.amount,
-          date: today,
-          notes: template.notes,
-          is_recurring: true
-        };
-        const { data, error } = await supabase.from('expenses').insert(payload).select().single();
-        if (!error && data) {
-          setExpenses(prev => [data, ...prev]);
-          addedCount++;
-        }
-      }
-    }
-    
+    const res = await postRecurringSalaries();
     setPostingRecurring(false);
-    if (addedCount > 0) router.refresh();
-    else toast.info('No new recurring salaries to post this month.');
+
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+
+    if (res.added && res.added.length > 0) {
+      setExpenses(prev => [...(res.added as Expense[]), ...prev]);
+      router.refresh();
+    } else {
+      toast.info('No new recurring salaries to post this month.');
+    }
   }
 
   function openAdd() {
@@ -154,25 +128,25 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
 
     setSaveError('');
     setSaving(true);
-    const supabase = createClient();
 
-    const payload = {
+    const res = await saveExpense({
+      id: editing?.id,
       type: form.type,
       title: form.title.trim(),
       amount,
       date: form.date,
       notes: form.notes.trim() || null,
       is_recurring: form.type === 'salary' ? form.is_recurring : false,
-    };
+    });
 
-    if (editing) {
-      const { error } = await supabase.from('expenses').update(payload).eq('id', editing.id);
-      if (error) { setSaveError(error.message); setSaving(false); return; }
-      setExpenses(prev => prev.map(e => e.id === editing.id ? { ...e, ...payload } : e));
-    } else {
-      const { data, error } = await supabase.from('expenses').insert(payload).select().single();
-      if (error) { setSaveError(error.message); setSaving(false); return; }
-      setExpenses(prev => [data, ...prev]);
+    if (res.error) { setSaveError(res.error); setSaving(false); return; }
+
+    if (res.data) {
+      if (editing) {
+        setExpenses(prev => prev.map(e => e.id === editing.id ? res.data : e));
+      } else {
+        setExpenses(prev => [res.data, ...prev]);
+      }
     }
 
     setSaving(false);
@@ -183,11 +157,12 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const supabase = createClient();
-    const { error } = await supabase.from('expenses').delete().eq('id', deleteTarget.id);
-    if (!error) {
+    const res = await deleteExpense(deleteTarget.id);
+    if (!res.error) {
       setExpenses(prev => prev.filter(e => e.id !== deleteTarget.id));
       router.refresh();
+    } else {
+      toast.error(res.error);
     }
     setDeleteTarget(null);
     setDeleting(false);

@@ -3,7 +3,10 @@
 import { requireAdmin, requireStaff, getServiceClient, AuthError } from '@/lib/auth/guards';
 
 const ALLOWED_ROLES = ['staff', 'admin'] as const;
-const ALLOWED_PERMISSIONS = ['dashboard', 'members', 'payments', 'plans', 'expenses', 'history', 'inventory', 'settings', 'checkins', 'classes'];
+const ALLOWED_PERMISSIONS = [
+  'dashboard', 'members', 'payments', 'plans', 'expenses',
+  'history', 'inventory', 'reports', 'settings', 'checkins', 'classes',
+];
 const DEFAULT_PERMISSIONS = ['dashboard', 'members', 'checkins', 'classes'];
 
 type ActionResult = { success?: boolean; error?: string };

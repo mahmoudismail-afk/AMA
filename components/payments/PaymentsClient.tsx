@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, DollarSign, AlertCircle, Trash2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { createPayment, softDeletePayment, restorePayment } from '@/lib/actions/payments';
 import { formatCurrency, formatDate, todayLocal } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -67,31 +67,22 @@ export default function PaymentsClient({
 
   async function handleSave() {
     if (!form.amount) { setError('Amount is required.'); return; }
+    const amount = Number(form.amount);
+    if (!Number.isFinite(amount) || amount <= 0) { setError('Please enter a valid positive amount.'); return; }
     setError(''); setSaving(true);
-    const supabase = createClient();
 
-    // Build notes: prepend payer name if no member selected
-    let notesValue = form.notes || null;
-    if (!form.member_id && form.payer_name.trim()) {
-      notesValue = form.notes
-        ? `[Payer: ${form.payer_name.trim()}] ${form.notes}`
-        : `[Payer: ${form.payer_name.trim()}]`;
-    }
-
-    const insertPayload: any = {
-      amount: Number(form.amount),
+    const res = await createPayment({
+      member_id: form.member_id || undefined,
+      payer_name: !form.member_id ? form.payer_name.trim() || undefined : undefined,
+      amount,
       payment_method: form.payment_method,
       payment_date: form.payment_date,
-      notes: notesValue,
-    };
-    if (form.member_id) insertPayload.member_id = form.member_id;
+      notes: form.notes || null,
+    });
 
-    const { data, error: err } = await supabase.from('payments').insert(insertPayload)
-      .select('*, member:members(profile:profiles(full_name))').single();
-
-    if (err) { setError(err.message); setSaving(false); return; }
-    if (data) setPayments((prev) => [data, ...prev]);
-    toast.success(`Payment of ${formatCurrency(Number(form.amount))} recorded`);
+    if (res.error) { setError(res.error); setSaving(false); return; }
+    if (res.data) setPayments((prev) => [res.data, ...prev]);
+    toast.success(`Payment of ${formatCurrency(amount)} recorded`);
     setModalOpen(false);
     setSaving(false);
     resetModal();
@@ -101,20 +92,15 @@ export default function PaymentsClient({
   async function handleDelete() {
     if (!paymentToDelete) return;
     setDeleting(true);
-    const supabase = createClient();
-    const now = new Date().toISOString();
-    const { error: err } = await supabase
-      .from('payments')
-      .update({ deleted_at: now })
-      .eq('id', paymentToDelete.id);
+    const res = await softDeletePayment(paymentToDelete.id);
 
-    if (err) {
+    if (res.error) {
       setDeleting(false);
-      toast.error(`Could not delete payment: ${err.message}`);
+      toast.error(`Could not delete payment: ${res.error}`);
       return;
     }
 
-    const deleted = { ...paymentToDelete, deleted_at: now };
+    const deleted = { ...paymentToDelete, deleted_at: res.deletedAt ?? new Date().toISOString() };
     setPayments((prev) => prev.filter((p) => p.id !== paymentToDelete.id));
     setDeletedPayments((prev) => [deleted, ...prev]);
     setPaymentToDelete(null);
@@ -126,19 +112,16 @@ export default function PaymentsClient({
 
   async function handleRestore(payment: any) {
     setRestoringId(payment.id);
-    const supabase = createClient();
-    const { error: err } = await supabase
-      .from('payments')
-      .update({ deleted_at: null })
-      .eq('id', payment.id);
+    const res = await restorePayment(payment.id);
 
-    if (!err) {
+    if (!res.error) {
       const restored = { ...payment, deleted_at: null };
       setDeletedPayments((prev) => prev.filter((p) => p.id !== payment.id));
       setPayments((prev) => [restored, ...prev.filter((p) => p.id !== payment.id)]);
       toast.success('Payment restored');
+    } else {
+      toast.error(`Could not restore payment: ${res.error}`);
     }
-    if (err) toast.error(`Could not restore payment: ${err.message}`);
     setRestoringId(null);
   }
 

@@ -6,7 +6,6 @@ import {
   Phone, Mail, Calendar, CreditCard,
   Dumbbell, RefreshCw, AlertCircle, DollarSign, Users, MessageCircle, Venus, Mars
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import {
   formatDate, formatDateTime, formatCurrency,
   getInitials, getMemberStatusColor, getMembershipStatusColor, daysRemaining
@@ -54,7 +53,7 @@ Just a friendly reminder that your AMA membership ${expiryTextEn}. It's been a p
 فريق AMA Fitness First`;
 
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // Pause / Resume state

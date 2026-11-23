@@ -17,7 +17,7 @@ export async function requireRole(requiredRole: 'admin' | 'staff') {
     .eq('auth_id', user.id)
     .single();
 
-  if (!profile) {
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
     redirect('/login?error=account-disabled');
   }
 
@@ -45,7 +45,7 @@ export async function requirePermission(permissionKey: string) {
     .eq('auth_id', user.id)
     .single();
 
-  if (!profile) {
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
     redirect('/login?error=account-disabled');
   }
 
@@ -55,7 +55,9 @@ export async function requirePermission(permissionKey: string) {
 
   const staffPerms = await getStaffPermissions();
   if (!staffPerms.includes(permissionKey)) {
-    redirect('/dashboard?access=denied');
+    const fallback = ['dashboard', 'members', 'payments', 'plans', 'inventory', 'expenses', 'history', 'reports']
+      .find((p) => p !== permissionKey && staffPerms.includes(p));
+    redirect(fallback ? `/${fallback}?access=denied` : '/settings?access=denied');
   }
 
   return role;

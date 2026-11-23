@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, Edit, Trash2, RefreshCw, MessageCircle } from 'lucide-react';
 import { getInitials, getMemberStatusColor, formatDate } from '@/lib/utils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
-import { createClient } from '@/lib/supabase/client';
+import { deleteMember } from '@/lib/actions/members';
 import { buildReminderUrl, whatsappNumber } from '@/lib/whatsapp';
 
 interface MembersTableProps {
@@ -40,59 +40,16 @@ export default function MembersTable({ members, currentStatus = 'all', searchQue
   const sendReminder = (m: any, dLeft: number) => {
     const phone = m.profile?.phone ?? '';
     if (!phone) return;
-    window.open(buildReminderUrl(phone, m.profile?.full_name ?? 'there', dLeft), '_blank');
+    window.open(buildReminderUrl(phone, m.profile?.full_name ?? 'there', dLeft), '_blank', 'noopener,noreferrer');
   };
-
-  // Auto-expire: when the table loads, patch any membership/member whose end_date has passed
-  useEffect(() => {
-    async function autoExpire() {
-      const supabase = createClient();
-      const today = new Date().toISOString().split('T')[0];
-
-      // Find active memberships that are past their end_date
-      const expiredMemberIds: string[] = [];
-      for (const m of members) {
-        const memberships: any[] = m.memberships ?? [];
-        for (const ms of memberships) {
-          if (ms.status === 'active' && ms.end_date && ms.end_date < today) {
-            // Mark the membership row as expired
-            await supabase
-              .from('memberships')
-              .update({ status: 'expired' })
-              .eq('member_id', m.id)
-              .eq('status', 'active')
-              .lt('end_date', today);
-            expiredMemberIds.push(m.id);
-            break;
-          }
-        }
-      }
-
-      // Mark the member record as expired too (only if not already expired)
-      if (expiredMemberIds.length > 0) {
-        for (const memberId of expiredMemberIds) {
-          await supabase
-            .from('members')
-            .update({ status: 'expired' })
-            .eq('id', memberId)
-            .neq('status', 'expired');
-        }
-        router.refresh();
-      }
-    }
-
-    autoExpire();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function handleDelete() {
     if (!deleteId) return;
     setDeleting(true);
-    const supabase = createClient();
-    const { error } = await supabase.from('members').delete().eq('id', deleteId);
+    const res = await deleteMember(deleteId);
     setDeleting(false);
-    if (error) {
-      toast.error(`Could not delete member: ${error.message}`);
+    if (res?.error) {
+      toast.error(`Could not delete member: ${res.error}`);
       return;
     }
     setDeleteId(null);

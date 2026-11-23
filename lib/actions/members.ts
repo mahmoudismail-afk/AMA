@@ -1,15 +1,20 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireStaff, getServiceClient } from '@/lib/auth/guards';
+import { requireActionPermission, getServiceClient } from '@/lib/auth/guards';
+import { todayInGymTz } from '@/lib/utils';
 
 const NOT_AUTHORIZED = { error: 'Not authorized' } as const;
 
-// Verifies the caller is a signed-in admin/staff user, THEN returns the service-role client (bypasses RLS).
+const VALID_MEMBER_STATUSES = ['active', 'inactive', 'paused', 'expired'] as const;
+const VALID_GENDERS = ['male', 'female', 'other', 'prefer_not_to_say'] as const;
+const VALID_PAYMENT_METHODS = ['cash', 'card', 'bank_transfer', 'other'] as const;
+
+// Verifies the caller has the 'members' permission, THEN returns the service-role client (bypasses RLS).
 // Returns null if the caller is not authorized.
 async function getAuthorizedClient() {
   try {
-    await requireStaff();
+    await requireActionPermission('members');
   } catch {
     return null;
   }
@@ -31,11 +36,26 @@ export async function createMember(formData: {
   const supabase = await getAuthorizedClient();
   if (!supabase) return NOT_AUTHORIZED;
 
+  const fullName = String(formData?.full_name ?? '').trim();
+  if (!fullName) return { error: 'Full name is required' };
+  if (!VALID_MEMBER_STATUSES.includes(formData.status as (typeof VALID_MEMBER_STATUSES)[number])) {
+    return { error: 'Invalid member status' };
+  }
+  if (formData.gender && !VALID_GENDERS.includes(formData.gender as (typeof VALID_GENDERS)[number])) {
+    return { error: 'Invalid gender' };
+  }
+  if (
+    formData.custom_price !== undefined &&
+    (typeof formData.custom_price !== 'number' || !Number.isFinite(formData.custom_price) || formData.custom_price < 0)
+  ) {
+    return { error: 'Invalid payment amount' };
+  }
+
   // 1. Create profile directly — no auth account needed
   const profileId = crypto.randomUUID();
   const { error: profileError } = await supabase.from('profiles').insert({
     id: profileId,
-    full_name: formData.full_name,
+    full_name: fullName,
     phone: formData.phone || null,
     email: formData.email || '',
     role: 'member',
@@ -99,7 +119,7 @@ export async function createMember(formData: {
 
 export async function updateMember(
   memberId: string,
-  profileId: string,
+  _profileId: string,
   formData: {
     full_name: string;
     phone: string;
@@ -112,15 +132,47 @@ export async function updateMember(
   const supabase = await getAuthorizedClient();
   if (!supabase) return NOT_AUTHORIZED;
 
-  await supabase.from('profiles').update({
-    full_name: formData.full_name,
-    phone: formData.phone || null,
-  }).eq('id', profileId);
+  const fullName = String(formData?.full_name ?? '').trim();
+  if (!fullName) return { error: 'Full name is required' };
+  if (!VALID_MEMBER_STATUSES.includes(formData.status as (typeof VALID_MEMBER_STATUSES)[number])) {
+    return { error: 'Invalid member status' };
+  }
+  if (formData.gender && !VALID_GENDERS.includes(formData.gender as (typeof VALID_GENDERS)[number])) {
+    return { error: 'Invalid gender' };
+  }
+
+  // Look up profile_id and existing notes on the server (never trust client-supplied profileId)
+  const { data: existingMember, error: fetchErr } = await supabase
+    .from('members')
+    .select('id, profile_id, status, notes')
+    .eq('id', memberId)
+    .single();
+  if (fetchErr || !existingMember) return { error: 'Member not found' };
+
+  // Strip any client-supplied [PAUSED:...] tag and preserve the server's tag if still paused
+  const cleanedInputNotes = (formData.notes ?? '').replace(/\[PAUSED:[^\]]*\]/g, '').trim();
+  const existingPauseTag = existingMember.notes?.match(/\[PAUSED:\d{4}-\d{2}-\d{2},\d+\]/)?.[0];
+  let finalNotes: string | null = cleanedInputNotes || null;
+  if (formData.status === 'paused' && existingPauseTag) {
+    finalNotes = cleanedInputNotes ? `${cleanedInputNotes} ${existingPauseTag}` : existingPauseTag;
+  }
+
+  if (existingMember.profile_id) {
+    const { error: profileErr } = await supabase
+      .from('profiles')
+      .update({
+        full_name: fullName,
+        phone: formData.phone || null,
+      })
+      .eq('id', existingMember.profile_id)
+      .eq('role', 'member');
+    if (profileErr) return { error: profileErr.message };
+  }
 
   const { error } = await supabase.from('members').update({
     date_of_birth: formData.date_of_birth || null,
     gender: formData.gender || null,
-    notes: formData.notes || null,
+    notes: finalNotes,
     status: formData.status,
   }).eq('id', memberId);
 
@@ -142,6 +194,16 @@ export async function renewMembership(
 ) {
   const supabase = await getAuthorizedClient();
   if (!supabase) return NOT_AUTHORIZED;
+
+  if (!VALID_PAYMENT_METHODS.includes(formData.payment_method as (typeof VALID_PAYMENT_METHODS)[number])) {
+    return { error: 'Invalid payment method' };
+  }
+  if (
+    formData.custom_price !== undefined &&
+    (typeof formData.custom_price !== 'number' || !Number.isFinite(formData.custom_price) || formData.custom_price < 0)
+  ) {
+    return { error: 'Invalid payment amount' };
+  }
 
   const { data: plan } = await supabase
     .from('membership_plans')
@@ -178,8 +240,8 @@ export async function renewMembership(
 
   // Record payment
   if (formData.record_payment) {
-    const paymentAmount = formData.custom_price !== undefined && !isNaN(formData.custom_price)
-      ? formData.custom_price 
+    const paymentAmount = formData.custom_price !== undefined
+      ? formData.custom_price
       : plan.price;
       
     await supabase.from('payments').insert({
@@ -280,7 +342,8 @@ export async function resumeMembership(memberId: string) {
   if (!pauseMatch) return { error: 'Pause data not found. Please manually set a new end date.' };
 
   const pausedAtStr = pauseMatch[1];
-  const daysLeftAtPause = parseInt(pauseMatch[2], 10);
+  const parsedDaysLeft = parseInt(pauseMatch[2], 10);
+  const daysLeftAtPause = Math.min(3650, Math.max(0, Number.isFinite(parsedDaysLeft) ? parsedDaysLeft : 0));
 
   // Calculate how many days have elapsed since the pause
   const today = new Date();
@@ -315,4 +378,64 @@ export async function resumeMembership(memberId: string) {
   revalidatePath(`/members/${memberId}`);
   revalidatePath('/members');
   return { success: true, daysLeft: daysLeftAtPause, daysPaused };
+}
+
+export async function deleteMember(memberId: string) {
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return NOT_AUTHORIZED;
+  if (!memberId || typeof memberId !== 'string') return { error: 'Invalid member ID' };
+
+  const { data: member } = await supabase
+    .from('members')
+    .select('profile_id')
+    .eq('id', memberId)
+    .single();
+
+  const { error } = await supabase.from('members').delete().eq('id', memberId);
+  if (error) return { error: error.message };
+
+  if (member?.profile_id) {
+    await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', member.profile_id)
+      .eq('role', 'member');
+  }
+
+  revalidatePath('/members');
+  return { success: true };
+}
+
+/**
+ * Server-side expiration using the gym timezone clock (Asia/Beirut).
+ * Safe to invoke during Server Component render (does not call revalidatePath).
+ */
+export async function expireOverdueMemberships() {
+  const supabase = await getAuthorizedClient();
+  if (!supabase) return;
+
+  const today = todayInGymTz();
+  const { data: overdue } = await supabase
+    .from('memberships')
+    .select('id, member_id')
+    .eq('status', 'active')
+    .lt('end_date', today);
+
+  if (!overdue || overdue.length === 0) return;
+
+  const memberIds = Array.from(new Set(overdue.map((ms) => ms.member_id).filter(Boolean)));
+
+  await supabase
+    .from('memberships')
+    .update({ status: 'expired' })
+    .eq('status', 'active')
+    .lt('end_date', today);
+
+  if (memberIds.length > 0) {
+    await supabase
+      .from('members')
+      .update({ status: 'expired' })
+      .in('id', memberIds)
+      .eq('status', 'active');
+  }
 }

@@ -167,21 +167,12 @@ async function getHistoryData(year: number) {
   };
 }
 
-async function getAvailableYears(): Promise<number[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('members')
-    .select('created_at')
-    .order('created_at', { ascending: true })
-    .limit(1);
+const MIN_YEAR = 2026;
 
-  const earliestYear = data?.[0]
-    ? new Date(data[0].created_at).getFullYear()
-    : new Date().getFullYear();
-
-  const currentYear = new Date().getFullYear();
+function getAvailableYears(): number[] {
+  const currentYear = Math.max(MIN_YEAR, new Date().getFullYear());
   const years: number[] = [];
-  for (let y = currentYear; y >= earliestYear; y--) {
+  for (let y = currentYear; y >= MIN_YEAR; y--) {
     years.push(y);
   }
   return years;
@@ -193,13 +184,14 @@ export default async function HistoryPage({
   searchParams?: Promise<{ year?: string }>;
 }) {
   const resolved = searchParams ? await searchParams : {};
-  const currentYear = new Date().getFullYear();
-  const year = resolved.year ? parseInt(resolved.year) : currentYear;
+  const currentYear = Math.max(MIN_YEAR, new Date().getFullYear());
+  const parsedYear = resolved.year ? parseInt(resolved.year, 10) : currentYear;
+  const year = Number.isFinite(parsedYear) && parsedYear >= MIN_YEAR ? parsedYear : currentYear;
   await requirePermission('history');
 
   const [historyData, availableYears] = await Promise.all([
     getHistoryData(year),
-    getAvailableYears(),
+    Promise.resolve(getAvailableYears()),
   ]);
 
   const { stats, revenueData, memberGrowthData, planDistData, renewalsData, monthlyExpensesData, profitData, inventoryData, genderData } = historyData;

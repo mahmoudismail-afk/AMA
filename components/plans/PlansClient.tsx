@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Edit, Trash2, Check, X, Dumbbell } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { savePlan, deletePlan } from '@/lib/actions/plans';
 import { formatCurrency } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -51,24 +51,23 @@ export default function PlansClient({ plans: initialPlans }: { plans: Plan[] }) 
     }
     setSaveError('');
     setSaving(true);
-    const supabase = createClient();
-    const payload = {
+    const res = await savePlan({
+      id: editPlan?.id,
       name: form.name,
       description: form.description || null,
       price: Number(form.price),
       duration_days: Number(form.duration_days),
       features: form.features ? form.features.split(',').map((f) => f.trim()).filter(Boolean) : [],
       is_active: form.is_active,
-    };
+    });
 
-    if (editPlan) {
-      const { data, error } = await supabase.from('membership_plans').update(payload).eq('id', editPlan.id).select().single();
-      if (error) { setSaveError(error.message); setSaving(false); return; }
-      if (data) setPlans((prev) => prev.map((p) => p.id === editPlan.id ? data : p));
-    } else {
-      const { data, error } = await supabase.from('membership_plans').insert(payload).select().single();
-      if (error) { setSaveError(error.message); setSaving(false); return; }
-      if (data) setPlans((prev) => [...prev, data]);
+    if (res.error) { setSaveError(res.error); setSaving(false); return; }
+    if (res.data) {
+      if (editPlan) {
+        setPlans((prev) => prev.map((p) => p.id === editPlan.id ? res.data : p));
+      } else {
+        setPlans((prev) => [...prev, res.data]);
+      }
     }
     setModalOpen(false);
     setSaving(false);
@@ -78,9 +77,11 @@ export default function PlansClient({ plans: initialPlans }: { plans: Plan[] }) 
   async function handleDelete() {
     if (!deleteId) return;
     setDeleting(true);
-    const supabase = createClient();
-    await supabase.from('membership_plans').delete().eq('id', deleteId);
-    setPlans((prev) => prev.filter((p) => p.id !== deleteId));
+    const res = await deletePlan(deleteId);
+    if (!res.error) {
+      setPlans((prev) => prev.filter((p) => p.id !== deleteId));
+      router.refresh();
+    }
     setDeleteId(null);
     setDeleting(false);
   }

@@ -16,9 +16,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('auth_id', user.id)
     .single();
 
-  const displayName = profile?.full_name || user.email?.split('@')[0] || 'Admin';
-  const displayEmail = (profile?.email?.includes('@amagym.local') || profile?.email?.includes('@salonraed.local')) ? '' : (profile?.email ?? '');
-  const role: string = profile?.role ?? 'staff';
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
+    redirect('/login?error=account-disabled');
+  }
+
+  const displayName = profile.full_name || user.email?.split('@')[0] || 'Admin';
+  const displayEmail = (profile.email?.includes('@amagym.local') || profile.email?.includes('@salonraed.local')) ? '' : (profile.email ?? '');
+  const role: string = profile.role;
   const staffPermissions = await getStaffPermissions();
 
   return (

@@ -3,11 +3,13 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import MemberForm from '@/components/members/MemberForm';
+import { requirePermission } from '@/lib/auth-guard';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Edit Member' };
 
 export default async function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission('members');
   const { id } = await params;
   const supabase = await createClient();
 

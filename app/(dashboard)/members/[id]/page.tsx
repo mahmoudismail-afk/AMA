@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { Edit, ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 import MemberDetailClient from '@/components/members/MemberDetailClient';
+import { requirePermission } from '@/lib/auth-guard';
 
 export const metadata: Metadata = { title: 'Member Profile' };
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission('members');
   const { id } = await params;
   const supabase = await createClient();
 

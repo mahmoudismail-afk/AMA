@@ -4,6 +4,7 @@ import { UserPlus } from 'lucide-react';
 import MembersTable from '@/components/members/MembersTable';
 import MemberSearch from '@/components/members/MemberSearch';
 import { requirePermission } from '@/lib/auth-guard';
+import { expireOverdueMemberships } from '@/lib/actions/members';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Members' };
@@ -17,6 +18,7 @@ export default async function MembersPage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   await requirePermission('members');
+  await expireOverdueMemberships();
   const supabase = await createClient();
   const q = (resolvedSearchParams.q ?? '').trim();
   let statusRaw = resolvedSearchParams.status;

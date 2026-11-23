@@ -4,8 +4,18 @@ const path = require('path');
 // --- CONFIGURATION ---
 const SOURCE_DIR = __dirname;
 const TARGET_DIR = 'I:\\My Drive\\WEB\\AMA';
-const EXCLUDED_DIRS = ['.git', 'node_modules', '.next', '.open-next', '.wrangler', 'tsconfig.tsbuildinfo'];
+const EXCLUDED_DIRS = [
+  '.git', 'node_modules', '.next', '.open-next', '.wrangler', 'tsconfig.tsbuildinfo',
+  '.env', '.env.local', '.env.production', '.env.development.local', '.env.test.local', '.env.production.local',
+  'dev_logs.txt',
+];
 // ---------------------
+
+function isExcluded(relativePath) {
+  const base = path.basename(relativePath);
+  if (base.startsWith('.env')) return true;
+  return EXCLUDED_DIRS.some(dir => relativePath.startsWith(dir + path.sep) || relativePath === dir);
+}
 
 function ensureDirectoryExistence(filePath) {
   const dirname = path.dirname(filePath);
@@ -19,8 +29,8 @@ function ensureDirectoryExistence(filePath) {
 function copyFile(sourcePath) {
   const relativePath = path.relative(SOURCE_DIR, sourcePath);
   
-  // Skip if it's in an excluded directory
-  if (EXCLUDED_DIRS.some(dir => relativePath.startsWith(dir + path.sep) || relativePath === dir)) {
+  // Skip if it's excluded
+  if (isExcluded(relativePath)) {
     return;
   }
 
@@ -50,7 +60,7 @@ function initialSync() {
       const fullPath = path.join(dir, file);
       const relativePath = path.relative(SOURCE_DIR, fullPath);
       
-      if (EXCLUDED_DIRS.some(excluded => relativePath.startsWith(excluded + path.sep) || relativePath === excluded)) {
+      if (isExcluded(relativePath)) {
         continue;
       }
 

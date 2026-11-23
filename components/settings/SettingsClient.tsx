@@ -129,7 +129,9 @@ export default function SettingsClient({
     { id: 'payments',  label: 'Payments' },
     { id: 'plans',     label: 'Plans' },
     { id: 'expenses',  label: 'Expenses' },
+    { id: 'inventory', label: 'Inventory' },
     { id: 'history',   label: 'History' },
+    { id: 'reports',   label: 'Reports' },
   ];
 
   async function handleSavePermissions() {

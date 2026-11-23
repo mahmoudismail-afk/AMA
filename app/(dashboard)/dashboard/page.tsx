@@ -6,6 +6,7 @@ import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import DashboardRefresher from '@/components/dashboard/DashboardRefresher';
 import NeedsAttention, { type AttentionItem } from '@/components/dashboard/NeedsAttention';
 import { todayInGymTz, daysBetween } from '@/lib/utils';
+import { requirePermission } from '@/lib/auth-guard';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Dashboard' };
@@ -204,6 +205,7 @@ async function getDashboardData() {
 }
 
 export default async function DashboardPage() {
+  await requirePermission('dashboard');
   const [{ stats, revenueData, memberGrowthData, planData, genderData }, attention] = await Promise.all([getDashboardData(), getAttentionItems()]);
 
   return (
